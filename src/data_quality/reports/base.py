@@ -72,6 +72,8 @@ class ReportGenerator(ABC):
             elif (
                 "integrity" in result.rule_name.lower()
                 or "referential" in result.rule_name.lower()
+                or "fk_" in result.rule_name.lower()
+                or result.rule_name.lower().startswith("auto_fk")
             ):
                 validator_type = "integrity"
             elif "pattern" in result.rule_name.lower() or any(

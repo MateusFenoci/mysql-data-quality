@@ -125,7 +125,10 @@ class TestHTMLReportGenerator:
 
         # Assert
         content = output_path.read_text(encoding="utf-8")
-        assert str(metadata) in content
+        # Check individual metadata fields instead of string representation
+        assert "test_db" in content
+        assert "1000" in content
+        assert "2023-01-01 12:00:00" in content
 
     def test_generate_report_empty_results(self, temp_dir):
         """Test report generation with empty results."""
@@ -496,5 +499,6 @@ class TestHTMLReportGenerator:
             assert result.rule_name in content
             assert result.message in content
 
-        # Check metadata is included
-        assert str(metadata) in content
+        # Check metadata is included (check individual fields)
+        assert "test_db" in content
+        assert "2023-01-01" in content

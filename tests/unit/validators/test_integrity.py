@@ -16,7 +16,7 @@ class TestIntegrityValidator:
         validator = IntegrityValidator()
 
         # Assert
-        assert validator.name == "referential_integrity"
+        assert validator.name == "integrity"
         assert "referential integrity" in validator.description.lower()
 
     def test_validate_foreign_key_with_valid_references(self):

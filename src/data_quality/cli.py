@@ -199,7 +199,7 @@ def describe_table(table_name):
     "--output-dir",
     "-o",
     type=click.Path(),
-    default="reports",
+    default="logs",
     help="Output directory for reports",
 )
 def validate(table_name, validators, sample_size, report_format, output_dir):
@@ -246,7 +246,7 @@ def validate(table_name, validators, sample_size, report_format, output_dir):
                 query = f"SELECT * FROM {table_name}"  # nosec B608
 
             data = connector.execute_query(query)
-            connector.disconnect()
+            # Don't disconnect yet - IntegrityValidator needs the connection
 
         console.print(
             f"\n🔍 [bold]Running data quality validations on '{table_name}'[/bold]"
@@ -264,7 +264,7 @@ def validate(table_name, validators, sample_size, report_format, output_dir):
             engine.register_validator(DuplicatesValidator())
 
         if not validators or "integrity" in validators:
-            engine.register_validator(IntegrityValidator())
+            engine.register_validator(IntegrityValidator(connector=connector))
 
         if not validators or "patterns" in validators:
             engine.register_validator(PatternsValidator())
@@ -275,51 +275,55 @@ def validate(table_name, validators, sample_size, report_format, output_dir):
                 data, table_name, list(validators) if validators else None
             )
 
+        # Now we can disconnect
+        connector.disconnect()
+
         # Display results
         if results:
             _display_validation_results(results)
 
-            # Generate reports if requested
-            if report_format:
-                console.print("\n📄 [bold]Generating reports...[/bold]")
-                output_path = Path(output_dir)
-                generated_reports = []
+            # Prepare metadata
+            metadata = {
+                "sample_size": sample_size if total_rows > sample_size else None,
+                "total_table_rows": total_rows,
+                "analyzed_rows": len(data),
+                "validators_used": list(validators)
+                if validators
+                else ["completeness", "duplicates", "integrity", "patterns"],
+            }
 
-                # Prepare metadata
-                metadata = {
-                    "sample_size": sample_size if total_rows > sample_size else None,
-                    "total_table_rows": total_rows,
-                    "analyzed_rows": len(data),
-                    "validators_used": list(validators)
-                    if validators
-                    else ["completeness", "duplicates", "integrity", "patterns"],
-                }
+            # Always generate at least a summary report, or specified formats
+            formats_to_generate = list(report_format) if report_format else ["summary"]
 
-                with console.status("[bold green]Generating reports..."):
-                    if "html" in report_format:
-                        html_generator = HTMLReportGenerator(output_path)
-                        html_file = html_generator.generate_report(
-                            results, table_name, metadata
-                        )
-                        generated_reports.append(("HTML", html_file))
+            console.print("\n📄 [bold]Generating reports...[/bold]")
+            output_path = Path(output_dir)
+            generated_reports = []
 
-                    if "json" in report_format:
-                        json_generator = JSONReportGenerator(output_path)
-                        json_file = json_generator.generate_report(
-                            results, table_name, metadata
-                        )
-                        generated_reports.append(("JSON", json_file))
+            with console.status("[bold green]Generating reports..."):
+                if "html" in formats_to_generate:
+                    html_generator = HTMLReportGenerator(output_path)
+                    html_file = html_generator.generate_report(
+                        results, table_name, metadata
+                    )
+                    generated_reports.append(("HTML", html_file))
 
-                    if "summary" in report_format:
-                        summary_generator = SummaryReportGenerator(output_path)
-                        summary_file = summary_generator.generate_report(
-                            results, table_name, metadata
-                        )
-                        generated_reports.append(("Summary", summary_file))
+                if "json" in formats_to_generate:
+                    json_generator = JSONReportGenerator(output_path)
+                    json_file = json_generator.generate_report(
+                        results, table_name, metadata
+                    )
+                    generated_reports.append(("JSON", json_file))
 
-                console.print("✅ [green]Reports generated successfully![/green]")
-                for report_type, file_path in generated_reports:
-                    console.print(f"  📁 {report_type}: [cyan]{file_path}[/cyan]")
+                if "summary" in formats_to_generate:
+                    summary_generator = SummaryReportGenerator(output_path)
+                    summary_file = summary_generator.generate_report(
+                        results, table_name, metadata
+                    )
+                    generated_reports.append(("Summary", summary_file))
+
+            console.print("✅ [green]Reports generated successfully![/green]")
+            for report_type, file_path in generated_reports:
+                console.print(f"  📁 {report_type}: [cyan]{file_path}[/cyan]")
         else:
             console.print("✅ [green]No validation rules to run.[/green]")
 
@@ -480,6 +484,16 @@ def _display_single_result(result):
         if "duplicate_values" in result.details and result.details["duplicate_values"]:
             sample_vals = result.details["duplicate_values"][:3]
             key_details.append(f"Sample values: {sample_vals}")
+
+        # Integrity-specific details
+        if "integrity_ratio" in result.details:
+            key_details.append(f"Integrity: {result.details['integrity_ratio']:.1%}")
+        if "orphaned_records" in result.details:
+            key_details.append(f"Orphaned: {result.details['orphaned_records']}")
+        if "total_references" in result.details:
+            key_details.append(f"Total refs: {result.details['total_references']}")
+        if "reference_table" in result.details:
+            key_details.append(f"Ref table: {result.details['reference_table']}")
 
         if key_details:
             console.print(f"    💡 {' | '.join(key_details)}")

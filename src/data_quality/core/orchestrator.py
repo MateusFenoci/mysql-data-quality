@@ -68,15 +68,21 @@ class DataQualityOrchestrator:
         # Database connector (managed by orchestrator)
         self.connector: Optional[DatabaseConnector] = None
 
-        # Register default validators
-        self._register_validators()
+        # Register default validators (excluding IntegrityValidator which needs connector)
+        self._register_basic_validators()
 
-    def _register_validators(self):
-        """Register all available validators."""
+    def _register_basic_validators(self):
+        """Register validators that don't need database connection."""
         self.analyzer.register_validator(CompletenessValidator())
         self.analyzer.register_validator(DuplicatesValidator())
-        self.analyzer.register_validator(IntegrityValidator())
         self.analyzer.register_validator(PatternsValidator())
+
+    def _register_integrity_validator(self):
+        """Register IntegrityValidator with database connector."""
+        if self.connector:
+            self.analyzer.register_validator(
+                IntegrityValidator(connector=self.connector)
+            )
 
     def _connect_database(self) -> bool:
         """Establish database connection."""
@@ -89,6 +95,9 @@ class DataQualityOrchestrator:
             if not self.connector.test_connection():
                 console.print("❌ [bold red]Database connection failed![/bold red]")
                 return False
+
+            # Register IntegrityValidator now that we have a connector
+            self._register_integrity_validator()
 
             return True
 
@@ -154,6 +163,10 @@ class DataQualityOrchestrator:
         # Connect to database
         if not self._connect_database():
             return {"error": "Database connection failed"}
+
+        console.print(
+            "🔧 [yellow]Database connected, IntegrityValidator should be registered now[/yellow]"
+        )
 
         try:
             with Progress(

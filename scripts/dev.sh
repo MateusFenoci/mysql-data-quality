@@ -74,9 +74,41 @@ case $COMMAND in
         echo "🏗️  Describing table: $2"
         poetry run data-quality describe-table "$2"
         ;;
+    "test-cli")
+        echo "🧪 Testing CLI imports and basic functionality..."
+        poetry run python -c "
+from src.data_quality.cli import main
+from src.data_quality.reports import HTMLReportGenerator, JSONReportGenerator, SummaryReportGenerator
+from src.data_quality.validators import ValidationEngine, CompletenessValidator
+print('✅ All imports successful!')
+print('✅ CLI module ready!')
+"
+        ;;
     "validate")
-        echo "🔍 Running data quality validations..."
-        poetry run data-quality validate
+        if [ -z "$2" ]; then
+            echo "❌ Please provide table name: ./scripts/dev.sh validate <table_name>"
+            echo "📋 Available options:"
+            echo "  ./scripts/dev.sh validate <table_name>                    # Basic validation with all reports"
+            echo "  ./scripts/dev.sh validate <table_name> --sample-size 5000 # Custom sample size"
+            echo ""
+            echo "📊 Use 'tables' command to see available tables first"
+            exit 1
+        fi
+        TABLE_NAME="$2"
+        echo "🔍 Running data quality validations on table: $TABLE_NAME"
+        shift 2
+        poetry run data-quality validate "$TABLE_NAME" --report-format html --report-format json --report-format summary --output-dir logs "$@"
+        ;;
+    "analyze")
+        if [ -z "$2" ]; then
+            echo "❌ Please provide table name: ./scripts/dev.sh analyze <table_name>"
+            echo "📋 This will run complete analysis with all reports"
+            exit 1
+        fi
+        TABLE_NAME="$2"
+        echo "📊 Running complete data quality analysis on table: $TABLE_NAME"
+        shift 2
+        poetry run data-quality analyze "$TABLE_NAME" --formats html --formats json --formats txt --output-dir logs "$@"
         ;;
     "shell")
         echo "🐚 Starting Poetry shell..."
@@ -92,6 +124,7 @@ case $COMMAND in
         echo "Development:"
         echo "  test        - Run tests"
         echo "  test-cov    - Run tests with coverage"
+        echo "  test-cli    - Test CLI imports and functionality"
         echo "  lint        - Run linting checks"
         echo "  format      - Format code"
         echo "  type-check  - Run type checking"
@@ -104,7 +137,8 @@ case $COMMAND in
         echo "  tables      - List database tables (estimated counts)"
         echo "  tables-real - List database tables (real counts - slower)"
         echo "  describe <table> - Describe table structure"
-        echo "  validate    - Run data quality validations"
+        echo "  validate <table> - Run data quality validations with reports"
+        echo "  analyze <table>  - Run complete analysis with all reports"
         echo ""
         echo "Utilities:"
         echo "  shell       - Start Poetry shell"

@@ -18,14 +18,17 @@ class IntegrityValidator(DataQualityValidator):
     Follows Single Responsibility Principle - only validates referential integrity.
     """
 
-    def __init__(self):
-        """Initialize referential integrity validator."""
+    def __init__(self, connector=None):
+        """Initialize referential integrity validator.
+
+        Args:
+            connector: Database connector for auto-discovering foreign keys
+        """
         super().__init__(
-            name="referential_integrity",
+            name="integrity",
             description="Validates referential integrity by checking foreign key relationships",
         )
-
-        # Note: No default rules for integrity as they require specific configuration
+        self.connector = connector
 
     def validate_table(
         self,
@@ -45,6 +48,10 @@ class IntegrityValidator(DataQualityValidator):
         """
         if rules is None:
             rules = self.get_rules()
+
+        # Auto-discover foreign keys if no rules and connector is available
+        if not rules and self.connector:
+            rules = self._auto_discover_foreign_keys(table_name)
 
         if not rules:
             return []
@@ -295,6 +302,64 @@ class IntegrityValidator(DataQualityValidator):
                 f"SELECT DISTINCT {columns_str} FROM {reference_table}"  # nosec B608
             )
             return connector.execute_query(query)
+
+    def _auto_discover_foreign_keys(self, table_name: str) -> List[ValidationRule]:
+        """Auto-discover foreign key relationships and create validation rules.
+
+        Args:
+            table_name: Name of the table to discover foreign keys for
+
+        Returns:
+            List of validation rules for discovered foreign keys
+        """
+        if not self.connector:
+            return []
+
+        try:
+            # Query to get foreign key information from MySQL
+            fk_query = """
+            SELECT
+                COLUMN_NAME,
+                REFERENCED_TABLE_NAME,
+                REFERENCED_COLUMN_NAME,
+                CONSTRAINT_NAME
+            FROM
+                INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+            WHERE
+                TABLE_SCHEMA = DATABASE()
+                AND TABLE_NAME = :table_name
+                AND REFERENCED_TABLE_NAME IS NOT NULL
+            """
+
+            fk_result = self.connector.execute_query(
+                fk_query, {"table_name": table_name}
+            )
+
+            rules = []
+            for _, row in fk_result.iterrows():
+                column_name = row["COLUMN_NAME"]
+                ref_table = row["REFERENCED_TABLE_NAME"]
+                ref_column = row["REFERENCED_COLUMN_NAME"]
+                constraint_name = row["CONSTRAINT_NAME"]
+
+                rule = ValidationRule(
+                    name=f"auto_fk_{constraint_name}",
+                    description=f"Auto-discovered foreign key: {column_name} -> {ref_table}.{ref_column}",
+                    severity=ValidationSeverity.ERROR,
+                    parameters={
+                        "foreign_key": column_name,
+                        "reference_table": ref_table,
+                        "reference_column": ref_column,
+                        "connector": self.connector,
+                    },
+                )
+                rules.append(rule)
+
+            return rules
+
+        except Exception:
+            # If auto-discovery fails, return empty list silently
+            return []
 
         # No reference data available
         raise ValueError(

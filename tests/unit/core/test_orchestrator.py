@@ -40,11 +40,10 @@ class TestDataQualityOrchestrator:
         assert isinstance(orchestrator.volumetry_calculator, VolumetryCalculator)
         assert orchestrator.connector is None
 
-        # Verify validators are registered
-        assert len(orchestrator.analyzer.engine._validators) == 4
+        # Verify validators are registered (IntegrityValidator only registered after connection)
+        assert len(orchestrator.analyzer.engine._validators) == 3
         assert "completeness" in orchestrator.analyzer.engine._validators
         assert "duplicates" in orchestrator.analyzer.engine._validators
-        assert "referential_integrity" in orchestrator.analyzer.engine._validators
         assert "patterns" in orchestrator.analyzer.engine._validators
 
     @patch("data_quality.core.orchestrator.load_config")
@@ -73,9 +72,9 @@ class TestDataQualityOrchestrator:
         assert orchestrator.report_manager == custom_report_manager
         assert orchestrator.volumetry_calculator == custom_volumetry_calculator
 
-        # Verify _register_validators is called on custom analyzer
+        # Verify _register_validators is called on custom analyzer (only basic validators, no IntegrityValidator)
         custom_analyzer.register_validator.assert_called()
-        assert custom_analyzer.register_validator.call_count == 4
+        assert custom_analyzer.register_validator.call_count == 3
 
     @patch("data_quality.core.orchestrator.load_config")
     @patch("data_quality.core.orchestrator.console")
@@ -620,15 +619,15 @@ class TestDataQualityOrchestrator:
         # Act
         orchestrator = DataQualityOrchestrator(analyzer=mock_analyzer)
 
-        # Assert - verify all 4 validators are registered
+        # Assert - verify all 3 basic validators are registered (IntegrityValidator needs connection)
         assert orchestrator is not None
-        assert mock_analyzer.register_validator.call_count == 4
+        assert mock_analyzer.register_validator.call_count == 3
 
-        # Check that validator types are correct
+        # Check that validator types are correct (only basic validators)
         call_args_list = mock_analyzer.register_validator.call_args_list
         validator_types = [call[0][0].__class__.__name__ for call in call_args_list]
 
         assert "CompletenessValidator" in validator_types
         assert "DuplicatesValidator" in validator_types
-        assert "IntegrityValidator" in validator_types
         assert "PatternsValidator" in validator_types
+        # IntegrityValidator not included as it needs database connection
