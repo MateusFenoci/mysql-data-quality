@@ -308,7 +308,6 @@ jobs:
       run: |
         CURRENT_BRANCH=${GITHUB_REF#refs/heads/}
         git push origin $CURRENT_BRANCH
-        git push origin v${{ steps.version.outputs.version }}
 
   update-readme-shields:
     name: Update README Shields
