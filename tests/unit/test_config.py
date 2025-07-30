@@ -3,6 +3,7 @@
 import os
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from pydantic import ValidationError
@@ -84,9 +85,19 @@ def test_load_config():
         old_cwd = os.getcwd()
         try:
             os.chdir(temp_dir)
-            config = load_config()
-            assert "app" in config
-            assert "database" in config
-            assert config["database"].name == os.getenv("DB_NAME")
+            # Mock environment variables to simulate .env loading
+            with patch.dict(
+                os.environ,
+                {
+                    "DB_NAME": "test_db",
+                    "DB_USER": "test_user",
+                    "DB_PASSWORD": "test_pass",
+                    "SECRET_KEY": "test-secret",
+                },
+            ):
+                config = load_config()
+                assert "app" in config
+                assert "database" in config
+                assert config["database"].name == "test_db"
         finally:
             os.chdir(old_cwd)
