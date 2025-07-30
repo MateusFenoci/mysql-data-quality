@@ -51,16 +51,11 @@ jobs:
     - name: Install project
       run: poetry install --no-interaction
 
-    - name: Run linting
-      run: |
-        poetry run ruff check src/ tests/
-        poetry run black --check src/ tests/
+    - name: Install pre-commit
+      run: pip install pre-commit
 
-    - name: Run type checking
-      run: poetry run mypy src/ || true
-
-    - name: Run security checks
-      run: poetry run bandit -r src/ || true
+    - name: Run pre-commit hooks
+      run: pre-commit run --all-files
 
     - name: Run tests with coverage
       run: |
