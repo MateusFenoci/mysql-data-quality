@@ -18,6 +18,8 @@ on:
 env:
   PYTHON_VERSION: '3.11'
   POETRY_VERSION: '1.8.4'
+permissions:
+  contents: write
 
 jobs:
   test:
@@ -199,9 +201,18 @@ jobs:
     - name: Determine version bump
       id: version-bump
       run: |
-        # Get commit messages since last tag
-        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-        COMMITS=$(git log ${LAST_TAG}..HEAD --oneline)
+        # Get commit messages since last tag or beginning of repo
+        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+
+        if [ -z "$LAST_TAG" ]; then
+          # No tags exist, analyze all commits
+          COMMITS=$(git log --oneline)
+          echo "📝 No previous tags found, analyzing all commits"
+        else
+          # Tags exist, analyze since last tag
+          COMMITS=$(git log ${LAST_TAG}..HEAD --oneline)
+          echo "📝 Analyzing commits since $LAST_TAG"
+        fi
 
         # Determine version bump type based on commit messages
         if echo "$COMMITS" | grep -q "BREAKING CHANGE\|major:"; then
@@ -236,46 +247,68 @@ jobs:
     - name: Generate changelog
       id: changelog
       run: |
-        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
         echo "# Changelog" > CHANGELOG.md
         echo "" >> CHANGELOG.md
         echo "## v${{ steps.version.outputs.version }} ($(date '+%Y-%m-%d'))" >> CHANGELOG.md
         echo "" >> CHANGELOG.md
 
-        # Get commits since last tag and categorize them
-        git log ${LAST_TAG}..HEAD~1 --pretty=format:"- %s (%h)" | while read line; do
-          if echo "$line" | grep -q "feat:\|feature:"; then
-            echo "### ✨ Features" >> CHANGELOG.md
-            echo "$line" | sed 's/feat://g' | sed 's/feature://g' >> CHANGELOG.md
-          elif echo "$line" | grep -q "fix:\|bugfix:"; then
-            echo "### 🐛 Bug Fixes" >> CHANGELOG.md
-            echo "$line" | sed 's/fix://g' | sed 's/bugfix://g' >> CHANGELOG.md
-          elif echo "$line" | grep -q "chore:"; then
-            echo "### 🔧 Maintenance" >> CHANGELOG.md
-            echo "$line" | sed 's/chore://g' >> CHANGELOG.md
-          else
-            echo "### 📝 Other Changes" >> CHANGELOG.md
-            echo "$line" >> CHANGELOG.md
-          fi
-        done
+        # Get commits since last tag or all commits if no tags
+        if [ -z "$LAST_TAG" ]; then
+          echo "📝 Generating changelog from all commits (no previous tags)"
+          git log --pretty=format:"- %s (%h)" | while read line; do
+            if echo "$line" | grep -q "feat:\|feature:"; then
+              echo "### ✨ Features" >> CHANGELOG.md
+              echo "$line" | sed 's/feat://g' | sed 's/feature://g' >> CHANGELOG.md
+            elif echo "$line" | grep -q "fix:\|bugfix:"; then
+              echo "### 🐛 Bug Fixes" >> CHANGELOG.md
+              echo "$line" | sed 's/fix://g' | sed 's/bugfix://g' >> CHANGELOG.md
+            elif echo "$line" | grep -q "chore:"; then
+              echo "### 🔧 Maintenance" >> CHANGELOG.md
+              echo "$line" | sed 's/chore://g' >> CHANGELOG.md
+            else
+              echo "### 📝 Other Changes" >> CHANGELOG.md
+              echo "$line" >> CHANGELOG.md
+            fi
+          done
+        else
+          echo "📝 Generating changelog since $LAST_TAG"
+          git log ${LAST_TAG}..HEAD~1 --pretty=format:"- %s (%h)" | while read line; do
+            if echo "$line" | grep -q "feat:\|feature:"; then
+              echo "### ✨ Features" >> CHANGELOG.md
+              echo "$line" | sed 's/feat://g' | sed 's/feature://g' >> CHANGELOG.md
+            elif echo "$line" | grep -q "fix:\|bugfix:"; then
+              echo "### 🐛 Bug Fixes" >> CHANGELOG.md
+              echo "$line" | sed 's/fix://g' | sed 's/bugfix://g' >> CHANGELOG.md
+            elif echo "$line" | grep -q "chore:"; then
+              echo "### 🔧 Maintenance" >> CHANGELOG.md
+              echo "$line" | sed 's/chore://g' >> CHANGELOG.md
+            else
+              echo "### 📝 Other Changes" >> CHANGELOG.md
+              echo "$line" >> CHANGELOG.md
+            fi
+          done
+        fi
 
     - name: Create Release
       id: create_release
-      uses: actions/create-release@v1
+      uses: softprops/action-gh-release@v2
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: v${{ steps.version.outputs.version }}
-        release_name: Release v${{ steps.version.outputs.version }}
+        name: Release v${{ steps.version.outputs.version }}
         body_path: CHANGELOG.md
         draft: false
         prerelease: false
+        files: |
+          dist/*
 
     - name: Push version changes
       run: |
         CURRENT_BRANCH=${GITHUB_REF#refs/heads/}
+        git pull --rebase origin $CURRENT_BRANCH
         git push origin $CURRENT_BRANCH
-        git push origin v${{ steps.version.outputs.version }}
 
   update-readme-shields:
     name: Update README Shields
@@ -330,6 +363,7 @@ jobs:
           echo "No changes to commit"
         else
           git commit -m "chore: update README shields with latest metrics"
+          git pull --rebase origin main
           git push origin main
         fi
 
