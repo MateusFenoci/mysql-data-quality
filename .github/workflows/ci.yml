@@ -307,6 +307,7 @@ jobs:
     - name: Push version changes
       run: |
         CURRENT_BRANCH=${GITHUB_REF#refs/heads/}
+        git pull --rebase origin $CURRENT_BRANCH
         git push origin $CURRENT_BRANCH
 
   update-readme-shields:
@@ -362,6 +363,7 @@ jobs:
           echo "No changes to commit"
         else
           git commit -m "chore: update README shields with latest metrics"
+          git pull --rebase origin main
           git push origin main
         fi
 
