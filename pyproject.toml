@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "data-quality"
-version = "0.1.0"
+version = "0.2.0"
 description = "Data quality validation and reporting tool"
 authors = ["Equipe Data Quality <suporte@empresa.com>"]
 readme = "README.md"
