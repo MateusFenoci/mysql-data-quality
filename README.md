@@ -1,8 +1,8 @@
 # Data Quality Tool
 
-[![Version](https://img.shields.io/badge/version-0.4.1-blue)](.)
+[![Version](https://img.shields.io/badge/version-0.4.3-blue)](.)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/MateusFenoci/mysql-data-quality/ci.yml?branch=main)](https://github.com/MateusFenoci/mysql-data-quality/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/coverage-92%25-brightgreen)](.)
+[![Coverage](https://img.shields.io/badge/coverage-90%25-brightgreen)](.)
 [![Tests](https://img.shields.io/badge/tests-17%20passed-brightgreen)](.)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
