@@ -3,7 +3,7 @@
 import pandas as pd
 from unittest.mock import patch
 
-from src.data_quality.core.volumetry_calculator import VolumetryCalculator
+from data_quality.core.volumetry_calculator import VolumetryCalculator
 
 
 class TestVolumetryCalculator:

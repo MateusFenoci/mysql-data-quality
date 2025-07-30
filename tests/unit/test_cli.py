@@ -5,12 +5,12 @@ from click.testing import CliRunner
 from unittest.mock import Mock, patch
 from pathlib import Path
 
-from src.data_quality.cli import (
+from data_quality.cli import (
     main,
     _display_validation_results,
     _display_single_result,
 )
-from src.data_quality.validators.base import ValidationResult, ValidationSeverity
+from data_quality.validators.base import ValidationResult, ValidationSeverity
 
 
 class TestCLI:
@@ -56,8 +56,8 @@ class TestCLI:
         # Assert
         assert result.exit_code == 0
 
-    @patch("src.data_quality.cli.load_config")
-    @patch("src.data_quality.cli.DatabaseConnectorFactory")
+    @patch("data_quality.cli.load_config")
+    @patch("data_quality.cli.DatabaseConnectorFactory")
     def test_test_connection_success(self, mock_factory, mock_load_config):
         """Test successful database connection test."""
         # Arrange
@@ -92,8 +92,8 @@ class TestCLI:
         mock_connector.test_connection.assert_called_once()
         mock_connector.disconnect.assert_called_once()
 
-    @patch("src.data_quality.cli.load_config")
-    @patch("src.data_quality.cli.DatabaseConnectorFactory")
+    @patch("data_quality.cli.load_config")
+    @patch("data_quality.cli.DatabaseConnectorFactory")
     def test_test_connection_failure(self, mock_factory, mock_load_config):
         """Test database connection test failure."""
         # Arrange
@@ -120,7 +120,7 @@ class TestCLI:
         assert result.exit_code == 0
         assert "Connection failed!" in result.output
 
-    @patch("src.data_quality.cli.load_config")
+    @patch("data_quality.cli.load_config")
     def test_test_connection_exception(self, mock_load_config):
         """Test database connection test with exception."""
         # Arrange
@@ -134,8 +134,8 @@ class TestCLI:
         assert result.exit_code == 0
         assert "Error: Config error" in result.output
 
-    @patch("src.data_quality.cli.load_config")
-    @patch("src.data_quality.cli.DatabaseConnectorFactory")
+    @patch("data_quality.cli.load_config")
+    @patch("data_quality.cli.DatabaseConnectorFactory")
     def test_list_tables_without_real_count(self, mock_factory, mock_load_config):
         """Test list tables command without real count."""
         # Arrange
@@ -178,8 +178,8 @@ class TestCLI:
         mock_connector.disconnect.assert_called_once()
         assert mock_connector.execute_query.call_count == 2
 
-    @patch("src.data_quality.cli.load_config")
-    @patch("src.data_quality.cli.DatabaseConnectorFactory")
+    @patch("data_quality.cli.load_config")
+    @patch("data_quality.cli.DatabaseConnectorFactory")
     def test_list_tables_with_real_count(self, mock_factory, mock_load_config):
         """Test list tables command with real count."""
         # Arrange
@@ -215,8 +215,8 @@ class TestCLI:
         mock_connector.disconnect.assert_called_once()
         assert mock_connector.get_table_count.call_count == 2
 
-    @patch("src.data_quality.cli.load_config")
-    @patch("src.data_quality.cli.DatabaseConnectorFactory")
+    @patch("data_quality.cli.load_config")
+    @patch("data_quality.cli.DatabaseConnectorFactory")
     def test_list_tables_no_tables_found(self, mock_factory, mock_load_config):
         """Test list tables command when no tables found."""
         # Arrange
@@ -240,7 +240,7 @@ class TestCLI:
         assert result.exit_code == 0
         assert "No tables found." in result.output
 
-    @patch("src.data_quality.cli.load_config")
+    @patch("data_quality.cli.load_config")
     def test_list_tables_exception(self, mock_load_config):
         """Test list tables command with exception."""
         # Arrange
@@ -254,8 +254,8 @@ class TestCLI:
         assert result.exit_code == 0
         assert "Error: Database error" in result.output
 
-    @patch("src.data_quality.cli.load_config")
-    @patch("src.data_quality.cli.DatabaseConnectorFactory")
+    @patch("data_quality.cli.load_config")
+    @patch("data_quality.cli.DatabaseConnectorFactory")
     def test_describe_table_success(self, mock_factory, mock_load_config):
         """Test describe table command success."""
         # Arrange
@@ -306,8 +306,8 @@ class TestCLI:
         mock_connector.get_table_count.assert_called_once_with("users")
         mock_connector.disconnect.assert_called_once()
 
-    @patch("src.data_quality.cli.load_config")
-    @patch("src.data_quality.cli.DatabaseConnectorFactory")
+    @patch("data_quality.cli.load_config")
+    @patch("data_quality.cli.DatabaseConnectorFactory")
     def test_describe_table_no_columns(self, mock_factory, mock_load_config):
         """Test describe table command with no column info."""
         # Arrange
@@ -331,7 +331,7 @@ class TestCLI:
         assert result.exit_code == 0
         assert "No column information found." in result.output
 
-    @patch("src.data_quality.cli.load_config")
+    @patch("data_quality.cli.load_config")
     def test_describe_table_exception(self, mock_load_config):
         """Test describe table command with exception."""
         # Arrange
@@ -361,7 +361,7 @@ class TestCLI:
         assert "--formats" in result.output
         assert "--separate-reports" in result.output
 
-    @patch("src.data_quality.core.DataQualityOrchestrator")
+    @patch("data_quality.core.DataQualityOrchestrator")
     def test_analyze_command_basic(self, mock_orchestrator_class):
         """Test basic analyze command execution."""
         # Arrange
@@ -390,7 +390,7 @@ class TestCLI:
         assert call_args[1]["sample_size"] == 10000  # default
         assert call_args[1]["unified_reports"] is True  # default
 
-    @patch("src.data_quality.core.DataQualityOrchestrator")
+    @patch("data_quality.core.DataQualityOrchestrator")
     def test_analyze_command_with_options(self, mock_orchestrator_class):
         """Test analyze command with various options."""
         # Arrange
@@ -436,7 +436,7 @@ class TestCLI:
         assert call_args[1]["unified_reports"] is False  # --separate-reports
         assert call_args[1]["report_name"] == "custom_report"
 
-    @patch("src.data_quality.core.DataQualityOrchestrator")
+    @patch("data_quality.core.DataQualityOrchestrator")
     def test_analyze_command_failure(self, mock_orchestrator_class):
         """Test analyze command when orchestrator fails."""
         # Arrange
@@ -452,7 +452,7 @@ class TestCLI:
         assert result.exit_code == 0  # CLI doesn't exit with error, just prints message
         assert "Analysis failed" in result.output
 
-    @patch("src.data_quality.core.DataQualityOrchestrator")
+    @patch("data_quality.core.DataQualityOrchestrator")
     def test_analyze_command_exception(self, mock_orchestrator_class):
         """Test analyze command when exception occurs."""
         # Arrange
@@ -466,9 +466,9 @@ class TestCLI:
         assert result.exit_code == 0  # CLI handles exceptions
         assert "Error: Test error" in result.output
 
-    @patch("src.data_quality.cli.load_config")
-    @patch("src.data_quality.cli.DatabaseConnectorFactory")
-    @patch("src.data_quality.validators.ValidationEngine")
+    @patch("data_quality.cli.load_config")
+    @patch("data_quality.cli.DatabaseConnectorFactory")
+    @patch("data_quality.validators.ValidationEngine")
     def test_validate_command_basic(
         self, mock_engine_class, mock_factory, mock_load_config
     ):
@@ -516,11 +516,11 @@ class TestCLI:
         mock_connector.disconnect.assert_called_once()
         mock_engine.validate_data.assert_called_once()
 
-    @patch("src.data_quality.cli.load_config")
-    @patch("src.data_quality.cli.DatabaseConnectorFactory")
-    @patch("src.data_quality.validators.ValidationEngine")
-    @patch("src.data_quality.reports.HTMLReportGenerator")
-    @patch("src.data_quality.reports.JSONReportGenerator")
+    @patch("data_quality.cli.load_config")
+    @patch("data_quality.cli.DatabaseConnectorFactory")
+    @patch("data_quality.validators.ValidationEngine")
+    @patch("data_quality.reports.HTMLReportGenerator")
+    @patch("data_quality.reports.JSONReportGenerator")
     def test_validate_command_with_reports(
         self,
         mock_json_gen,
@@ -582,7 +582,7 @@ class TestCLI:
         assert "HTML: /path/to/report.html" in result.output
         assert "JSON: /path/to/report.json" in result.output
 
-    @patch("src.data_quality.cli.load_config")
+    @patch("data_quality.cli.load_config")
     def test_validate_command_exception(self, mock_load_config):
         """Test validate command with exception."""
         # Arrange

@@ -6,7 +6,7 @@ from unittest.mock import Mock, patch
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import SQLAlchemyError
 
-from src.data_quality.connectors.base import DatabaseConnector
+from data_quality.connectors.base import DatabaseConnector
 
 
 class ConcreteDatabaseConnector(DatabaseConnector):
@@ -55,7 +55,7 @@ class TestDatabaseConnector:
         with pytest.raises(RuntimeError, match="Database not connected"):
             connector.execute_query("SELECT 1")
 
-    @patch("src.data_quality.connectors.base.text")
+    @patch("data_quality.connectors.base.text")
     def test_execute_query_success(self, mock_text):
         """Test successful query execution."""
         # Arrange
@@ -89,7 +89,7 @@ class TestDatabaseConnector:
             "SELECT * FROM test", {"param": "value"}
         )
 
-    @patch("src.data_quality.connectors.base.text")
+    @patch("data_quality.connectors.base.text")
     def test_execute_query_with_exception(self, mock_text):
         """Test query execution with database error."""
         # Arrange

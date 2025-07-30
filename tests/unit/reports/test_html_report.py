@@ -7,8 +7,8 @@ from unittest.mock import patch
 
 import pytest
 
-from src.data_quality.reports.html_report import HTMLReportGenerator
-from src.data_quality.validators.base import ValidationResult, ValidationSeverity
+from data_quality.reports.html_report import HTMLReportGenerator
+from data_quality.validators.base import ValidationResult, ValidationSeverity
 
 
 class TestHTMLReportGenerator:
@@ -83,7 +83,7 @@ class TestHTMLReportGenerator:
         assert generator.output_dir == temp_dir
         assert isinstance(generator, HTMLReportGenerator)
 
-    @patch("src.data_quality.reports.html_report.datetime")
+    @patch("data_quality.reports.html_report.datetime")
     def test_generate_report_creates_file(
         self, mock_datetime, temp_dir, sample_results
     ):

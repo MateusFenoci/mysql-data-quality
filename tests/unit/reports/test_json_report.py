@@ -5,8 +5,8 @@ import tempfile
 from pathlib import Path
 from datetime import datetime
 
-from src.data_quality.reports.json_report import JSONReportGenerator
-from src.data_quality.validators.base import ValidationResult, ValidationSeverity
+from data_quality.reports.json_report import JSONReportGenerator
+from data_quality.validators.base import ValidationResult, ValidationSeverity
 
 
 class TestJSONReportGenerator:

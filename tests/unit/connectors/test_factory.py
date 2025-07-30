@@ -2,9 +2,9 @@
 
 import pytest
 
-from src.data_quality.connectors.factory import DatabaseConnectorFactory
-from src.data_quality.connectors.base import DatabaseConnector
-from src.data_quality.connectors.mysql import MySQLConnector
+from data_quality.connectors.factory import DatabaseConnectorFactory
+from data_quality.connectors.base import DatabaseConnector
+from data_quality.connectors.mysql import MySQLConnector
 
 
 class MockConnector(DatabaseConnector):

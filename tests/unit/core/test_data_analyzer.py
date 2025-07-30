@@ -3,9 +3,9 @@
 import pandas as pd
 from unittest.mock import Mock, patch
 
-from src.data_quality.core.data_analyzer import DataAnalyzer
-from src.data_quality.validators.base import ValidationResult, ValidationSeverity
-from src.data_quality.validators.completeness import CompletenessValidator
+from data_quality.core.data_analyzer import DataAnalyzer
+from data_quality.validators.base import ValidationResult, ValidationSeverity
+from data_quality.validators.completeness import CompletenessValidator
 from datetime import datetime
 
 
@@ -34,7 +34,7 @@ class TestDataAnalyzer:
         assert "completeness" in analyzer.engine._validators
         assert analyzer.engine._validators["completeness"] == validator
 
-    @patch("src.data_quality.core.data_analyzer.Progress")
+    @patch("data_quality.core.data_analyzer.Progress")
     def test_analyze_dataframe(self, mock_progress_class):
         """Test dataframe analysis."""
         # Arrange

@@ -4,17 +4,17 @@ import pandas as pd
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from src.data_quality.core.orchestrator import DataQualityOrchestrator
-from src.data_quality.core.data_analyzer import DataAnalyzer
-from src.data_quality.core.report_manager import ReportManager
-from src.data_quality.core.volumetry_calculator import VolumetryCalculator
-from src.data_quality.validators.base import ValidationResult, ValidationSeverity
+from data_quality.core.orchestrator import DataQualityOrchestrator
+from data_quality.core.data_analyzer import DataAnalyzer
+from data_quality.core.report_manager import ReportManager
+from data_quality.core.volumetry_calculator import VolumetryCalculator
+from data_quality.validators.base import ValidationResult, ValidationSeverity
 
 
 class TestDataQualityOrchestrator:
     """Test cases for DataQualityOrchestrator."""
 
-    @patch("src.data_quality.core.orchestrator.load_config")
+    @patch("data_quality.core.orchestrator.load_config")
     def test_init_default_components(self, mock_load_config):
         """Test orchestrator initialization with default components."""
         # Arrange
@@ -47,7 +47,7 @@ class TestDataQualityOrchestrator:
         assert "referential_integrity" in orchestrator.analyzer.engine._validators
         assert "patterns" in orchestrator.analyzer.engine._validators
 
-    @patch("src.data_quality.core.orchestrator.load_config")
+    @patch("data_quality.core.orchestrator.load_config")
     def test_init_custom_components(self, mock_load_config):
         """Test orchestrator initialization with custom components."""
         # Arrange
@@ -77,9 +77,9 @@ class TestDataQualityOrchestrator:
         custom_analyzer.register_validator.assert_called()
         assert custom_analyzer.register_validator.call_count == 4
 
-    @patch("src.data_quality.core.orchestrator.load_config")
-    @patch("src.data_quality.core.orchestrator.console")
-    @patch("src.data_quality.core.orchestrator.sys")
+    @patch("data_quality.core.orchestrator.load_config")
+    @patch("data_quality.core.orchestrator.console")
+    @patch("data_quality.core.orchestrator.sys")
     def test_init_config_error(self, mock_sys, mock_console, mock_load_config):
         """Test orchestrator initialization with config error."""
         # Arrange
@@ -94,8 +94,8 @@ class TestDataQualityOrchestrator:
         )
         mock_sys.exit.assert_called_with(1)
 
-    @patch("src.data_quality.core.orchestrator.load_config")
-    @patch("src.data_quality.core.orchestrator.DatabaseConnectorFactory")
+    @patch("data_quality.core.orchestrator.load_config")
+    @patch("data_quality.core.orchestrator.DatabaseConnectorFactory")
     def test_connect_database_success(self, mock_factory, mock_load_config):
         """Test successful database connection."""
         # Arrange
@@ -122,9 +122,9 @@ class TestDataQualityOrchestrator:
         mock_connector.connect.assert_called_once()
         mock_connector.test_connection.assert_called_once()
 
-    @patch("src.data_quality.core.orchestrator.load_config")
-    @patch("src.data_quality.core.orchestrator.DatabaseConnectorFactory")
-    @patch("src.data_quality.core.orchestrator.console")
+    @patch("data_quality.core.orchestrator.load_config")
+    @patch("data_quality.core.orchestrator.DatabaseConnectorFactory")
+    @patch("data_quality.core.orchestrator.console")
     def test_connect_database_test_failure(
         self, mock_console, mock_factory, mock_load_config
     ):
@@ -150,9 +150,9 @@ class TestDataQualityOrchestrator:
             "❌ [bold red]Database connection failed![/bold red]"
         )
 
-    @patch("src.data_quality.core.orchestrator.load_config")
-    @patch("src.data_quality.core.orchestrator.DatabaseConnectorFactory")
-    @patch("src.data_quality.core.orchestrator.console")
+    @patch("data_quality.core.orchestrator.load_config")
+    @patch("data_quality.core.orchestrator.DatabaseConnectorFactory")
+    @patch("data_quality.core.orchestrator.console")
     def test_connect_database_exception(
         self, mock_console, mock_factory, mock_load_config
     ):
@@ -176,7 +176,7 @@ class TestDataQualityOrchestrator:
             "❌ [bold red]Database connection error: Connection error[/bold red]"
         )
 
-    @patch("src.data_quality.core.orchestrator.load_config")
+    @patch("data_quality.core.orchestrator.load_config")
     def test_disconnect_database_with_connector(self, mock_load_config):
         """Test database disconnection when connector exists."""
         # Arrange
@@ -193,7 +193,7 @@ class TestDataQualityOrchestrator:
         # Assert
         mock_connector.disconnect.assert_called_once()
 
-    @patch("src.data_quality.core.orchestrator.load_config")
+    @patch("data_quality.core.orchestrator.load_config")
     def test_disconnect_database_without_connector(self, mock_load_config):
         """Test database disconnection when no connector."""
         # Arrange
@@ -208,7 +208,7 @@ class TestDataQualityOrchestrator:
         # Assert - no exception raised
         assert orchestrator.connector is None
 
-    @patch("src.data_quality.core.orchestrator.load_config")
+    @patch("data_quality.core.orchestrator.load_config")
     def test_build_metadata(self, mock_load_config):
         """Test metadata building."""
         # Arrange
@@ -260,8 +260,8 @@ class TestDataQualityOrchestrator:
         mock_volumetry_calc.calculate_volume_metrics.assert_called_once_with(data)
         mock_volumetry_calc.get_sampling_info.assert_called_once_with(100, 3)
 
-    @patch("src.data_quality.core.orchestrator.load_config")
-    @patch("src.data_quality.core.orchestrator.console")
+    @patch("data_quality.core.orchestrator.load_config")
+    @patch("data_quality.core.orchestrator.console")
     def test_analyze_table_connection_failure(self, mock_console, mock_load_config):
         """Test analyze_table when database connection fails."""
         # Arrange
@@ -278,9 +278,9 @@ class TestDataQualityOrchestrator:
         assert result == {"error": "Database connection failed"}
         orchestrator._connect_database.assert_called_once()
 
-    @patch("src.data_quality.core.orchestrator.load_config")
-    @patch("src.data_quality.core.orchestrator.Progress")
-    @patch("src.data_quality.core.orchestrator.console")
+    @patch("data_quality.core.orchestrator.load_config")
+    @patch("data_quality.core.orchestrator.Progress")
+    @patch("data_quality.core.orchestrator.console")
     def test_analyze_table_success_full_table(
         self, mock_console, mock_progress_class, mock_load_config
     ):
@@ -344,9 +344,9 @@ class TestDataQualityOrchestrator:
         )
         orchestrator._disconnect_database.assert_called_once()
 
-    @patch("src.data_quality.core.orchestrator.load_config")
-    @patch("src.data_quality.core.orchestrator.Progress")
-    @patch("src.data_quality.core.orchestrator.console")
+    @patch("data_quality.core.orchestrator.load_config")
+    @patch("data_quality.core.orchestrator.Progress")
+    @patch("data_quality.core.orchestrator.console")
     def test_analyze_table_success_sample(
         self, mock_console, mock_progress_class, mock_load_config
     ):
@@ -396,8 +396,8 @@ class TestDataQualityOrchestrator:
         expected_query = "SELECT * FROM test_table ORDER BY RAND() LIMIT 1000"
         mock_connector.execute_query.assert_called_once_with(expected_query)
 
-    @patch("src.data_quality.core.orchestrator.load_config")
-    @patch("src.data_quality.core.orchestrator.console")
+    @patch("data_quality.core.orchestrator.load_config")
+    @patch("data_quality.core.orchestrator.console")
     def test_analyze_table_exception(self, mock_console, mock_load_config):
         """Test analyze_table with exception during analysis."""
         # Arrange
@@ -420,8 +420,8 @@ class TestDataQualityOrchestrator:
         )
         orchestrator._disconnect_database.assert_called_once()
 
-    @patch("src.data_quality.core.orchestrator.load_config")
-    @patch("src.data_quality.core.orchestrator.console")
+    @patch("data_quality.core.orchestrator.load_config")
+    @patch("data_quality.core.orchestrator.console")
     def test_generate_reports_with_error(self, mock_console, mock_load_config):
         """Test generate_reports with error in analysis results."""
         # Arrange
@@ -440,7 +440,7 @@ class TestDataQualityOrchestrator:
             "❌ [bold red]Cannot generate report: Analysis failed[/bold red]"
         )
 
-    @patch("src.data_quality.core.orchestrator.load_config")
+    @patch("data_quality.core.orchestrator.load_config")
     def test_generate_reports_unified(self, mock_load_config):
         """Test generate_reports with unified reports."""
         # Arrange
@@ -476,7 +476,7 @@ class TestDataQualityOrchestrator:
             expected_reports
         )
 
-    @patch("src.data_quality.core.orchestrator.load_config")
+    @patch("data_quality.core.orchestrator.load_config")
     def test_generate_reports_multiple(self, mock_load_config):
         """Test generate_reports with multiple separate reports."""
         # Arrange
@@ -509,7 +509,7 @@ class TestDataQualityOrchestrator:
             expected_reports
         )
 
-    @patch("src.data_quality.core.orchestrator.load_config")
+    @patch("data_quality.core.orchestrator.load_config")
     def test_generate_reports_default_formats(self, mock_load_config):
         """Test generate_reports with default formats."""
         # Arrange
@@ -535,8 +535,8 @@ class TestDataQualityOrchestrator:
             [], "test_table", {}, None, ["html", "json", "txt"]
         )
 
-    @patch("src.data_quality.core.orchestrator.load_config")
-    @patch("src.data_quality.core.orchestrator.console")
+    @patch("data_quality.core.orchestrator.load_config")
+    @patch("data_quality.core.orchestrator.console")
     def test_run_complete_analysis_success(self, mock_console, mock_load_config):
         """Test run_complete_analysis success."""
         # Arrange
@@ -580,8 +580,8 @@ class TestDataQualityOrchestrator:
             "\n🎉 [bold green]Complete analysis finished![/bold green]"
         )
 
-    @patch("src.data_quality.core.orchestrator.load_config")
-    @patch("src.data_quality.core.orchestrator.console")
+    @patch("data_quality.core.orchestrator.load_config")
+    @patch("data_quality.core.orchestrator.console")
     def test_run_complete_analysis_with_error(self, mock_console, mock_load_config):
         """Test run_complete_analysis when analysis has error."""
         # Arrange
@@ -608,7 +608,7 @@ class TestDataQualityOrchestrator:
             for call in mock_console.print.call_args_list[1:]
         )
 
-    @patch("src.data_quality.core.orchestrator.load_config")
+    @patch("data_quality.core.orchestrator.load_config")
     def test_register_validators(self, mock_load_config):
         """Test that all validators are properly registered."""
         # Arrange

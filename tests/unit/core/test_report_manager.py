@@ -5,8 +5,8 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 import pytest
 
-from src.data_quality.core.report_manager import ReportManager
-from src.data_quality.validators.base import ValidationResult, ValidationSeverity
+from data_quality.core.report_manager import ReportManager
+from data_quality.validators.base import ValidationResult, ValidationSeverity
 from datetime import datetime
 
 
@@ -34,7 +34,7 @@ class TestReportManager:
             # Assert
             assert manager.output_dir.exists()
 
-    @patch("src.data_quality.core.report_manager.HTMLReportGenerator")
+    @patch("data_quality.core.report_manager.HTMLReportGenerator")
     def test_generate_single_report_html(self, mock_html_generator_class):
         """Test generating single HTML report."""
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -94,9 +94,9 @@ class TestReportManager:
             with pytest.raises(ValueError, match="Unsupported format: invalid"):
                 manager.generate_single_report([result], "test_table", "invalid")
 
-    @patch("src.data_quality.core.report_manager.Progress")
-    @patch("src.data_quality.core.report_manager.HTMLReportGenerator")
-    @patch("src.data_quality.core.report_manager.JSONReportGenerator")
+    @patch("data_quality.core.report_manager.Progress")
+    @patch("data_quality.core.report_manager.HTMLReportGenerator")
+    @patch("data_quality.core.report_manager.JSONReportGenerator")
     def test_generate_multiple_reports(
         self, mock_json_gen_class, mock_html_gen_class, mock_progress_class
     ):
@@ -149,7 +149,7 @@ class TestReportManager:
             assert reports["html"] == html_path
             assert reports["json"] == json_path
 
-    @patch("src.data_quality.core.report_manager.console")
+    @patch("data_quality.core.report_manager.console")
     def test_display_report_summary_with_reports(self, mock_console):
         """Test displaying report summary with generated reports."""
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -174,7 +174,7 @@ class TestReportManager:
             assert any("HTML" in call for call in calls)
             assert any("JSON" in call for call in calls)
 
-    @patch("src.data_quality.core.report_manager.console")
+    @patch("data_quality.core.report_manager.console")
     def test_display_report_summary_no_reports(self, mock_console):
         """Test displaying report summary with no generated reports."""
         with tempfile.TemporaryDirectory() as temp_dir:

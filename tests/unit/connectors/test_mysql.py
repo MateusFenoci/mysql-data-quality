@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import Mock, patch
 from sqlalchemy.exc import SQLAlchemyError
 
-from src.data_quality.connectors.mysql import MySQLConnector
+from data_quality.connectors.mysql import MySQLConnector
 
 
 class TestMySQLConnector:
@@ -22,7 +22,7 @@ class TestMySQLConnector:
         assert connector.connection_string == connection_string
         assert connector.engine is None
 
-    @patch("src.data_quality.connectors.mysql.create_engine")
+    @patch("data_quality.connectors.mysql.create_engine")
     def test_connect_success(self, mock_create_engine):
         """Test successful MySQL connection."""
         # Arrange
@@ -41,7 +41,7 @@ class TestMySQLConnector:
         mock_create_engine.assert_called_once_with("mysql://user:pass@host:3306/db")
         connector.test_connection.assert_called_once()
 
-    @patch("src.data_quality.connectors.mysql.create_engine")
+    @patch("data_quality.connectors.mysql.create_engine")
     def test_connect_failure(self, mock_create_engine):
         """Test MySQL connection failure."""
         # Arrange
@@ -56,7 +56,7 @@ class TestMySQLConnector:
 
         assert connector.engine is None
 
-    @patch("src.data_quality.connectors.mysql.create_engine")
+    @patch("data_quality.connectors.mysql.create_engine")
     def test_connect_test_connection_failure(self, mock_create_engine):
         """Test MySQL connection when test_connection fails."""
         # Arrange
@@ -111,7 +111,7 @@ class TestMySQLConnector:
         # Assert
         assert result is False
 
-    @patch("src.data_quality.connectors.mysql.text")
+    @patch("data_quality.connectors.mysql.text")
     @patch("builtins.print")  # Mock print to avoid output during tests
     def test_test_connection_success(self, mock_print, mock_text):
         """Test successful connection test."""
@@ -141,7 +141,7 @@ class TestMySQLConnector:
         mock_connection.execute.assert_called_once_with("SELECT 1")
         mock_result.fetchone.assert_called_once()
 
-    @patch("src.data_quality.connectors.mysql.text")
+    @patch("data_quality.connectors.mysql.text")
     @patch("builtins.print")  # Mock print to capture debug output
     def test_test_connection_failure(self, mock_print, mock_text):
         """Test connection test failure."""
@@ -207,7 +207,7 @@ class TestMySQLConnector:
         assert "numeric_scale" in query
         assert "ORDER BY ordinal_position" in query
 
-    @patch("src.data_quality.connectors.mysql.create_engine")
+    @patch("data_quality.connectors.mysql.create_engine")
     def test_full_connection_lifecycle(self, mock_create_engine):
         """Test complete connection lifecycle."""
         # Arrange

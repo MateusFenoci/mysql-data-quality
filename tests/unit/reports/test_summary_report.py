@@ -7,8 +7,8 @@ from unittest.mock import patch
 
 import pytest
 
-from src.data_quality.reports.summary_report import SummaryReportGenerator
-from src.data_quality.validators.base import ValidationResult, ValidationSeverity
+from data_quality.reports.summary_report import SummaryReportGenerator
+from data_quality.validators.base import ValidationResult, ValidationSeverity
 
 
 class TestSummaryReportGenerator:
@@ -95,7 +95,7 @@ class TestSummaryReportGenerator:
         assert generator.output_dir == temp_dir
         assert isinstance(generator, SummaryReportGenerator)
 
-    @patch("src.data_quality.reports.summary_report.datetime")
+    @patch("data_quality.reports.summary_report.datetime")
     def test_generate_report_creates_file(
         self, mock_datetime, temp_dir, sample_results
     ):
