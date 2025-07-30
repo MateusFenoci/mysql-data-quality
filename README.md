@@ -229,5 +229,5 @@ Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para de
 Para suporte e dúvidas:
 
 - 📧 Email: fenocimateus@gmail.com
-- 🐛 Issues: [Issues Internas](docs/support.md)
+- 🐛 Issues: [Issues Internas](https://github.com/MateusFenoci/mysql-data-quality/issues)
 - 📖 Documentação: [Docs](docs/)
