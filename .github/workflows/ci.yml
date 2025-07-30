@@ -199,9 +199,18 @@ jobs:
     - name: Determine version bump
       id: version-bump
       run: |
-        # Get commit messages since last tag
-        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-        COMMITS=$(git log ${LAST_TAG}..HEAD --oneline)
+        # Get commit messages since last tag or beginning of repo
+        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+
+        if [ -z "$LAST_TAG" ]; then
+          # No tags exist, analyze all commits
+          COMMITS=$(git log --oneline)
+          echo "📝 No previous tags found, analyzing all commits"
+        else
+          # Tags exist, analyze since last tag
+          COMMITS=$(git log ${LAST_TAG}..HEAD --oneline)
+          echo "📝 Analyzing commits since $LAST_TAG"
+        fi
 
         # Determine version bump type based on commit messages
         if echo "$COMMITS" | grep -q "BREAKING CHANGE\|major:"; then
@@ -236,28 +245,48 @@ jobs:
     - name: Generate changelog
       id: changelog
       run: |
-        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
         echo "# Changelog" > CHANGELOG.md
         echo "" >> CHANGELOG.md
         echo "## v${{ steps.version.outputs.version }} ($(date '+%Y-%m-%d'))" >> CHANGELOG.md
         echo "" >> CHANGELOG.md
 
-        # Get commits since last tag and categorize them
-        git log ${LAST_TAG}..HEAD~1 --pretty=format:"- %s (%h)" | while read line; do
-          if echo "$line" | grep -q "feat:\|feature:"; then
-            echo "### ✨ Features" >> CHANGELOG.md
-            echo "$line" | sed 's/feat://g' | sed 's/feature://g' >> CHANGELOG.md
-          elif echo "$line" | grep -q "fix:\|bugfix:"; then
-            echo "### 🐛 Bug Fixes" >> CHANGELOG.md
-            echo "$line" | sed 's/fix://g' | sed 's/bugfix://g' >> CHANGELOG.md
-          elif echo "$line" | grep -q "chore:"; then
-            echo "### 🔧 Maintenance" >> CHANGELOG.md
-            echo "$line" | sed 's/chore://g' >> CHANGELOG.md
-          else
-            echo "### 📝 Other Changes" >> CHANGELOG.md
-            echo "$line" >> CHANGELOG.md
-          fi
-        done
+        # Get commits since last tag or all commits if no tags
+        if [ -z "$LAST_TAG" ]; then
+          echo "📝 Generating changelog from all commits (no previous tags)"
+          git log --pretty=format:"- %s (%h)" | while read line; do
+            if echo "$line" | grep -q "feat:\|feature:"; then
+              echo "### ✨ Features" >> CHANGELOG.md
+              echo "$line" | sed 's/feat://g' | sed 's/feature://g' >> CHANGELOG.md
+            elif echo "$line" | grep -q "fix:\|bugfix:"; then
+              echo "### 🐛 Bug Fixes" >> CHANGELOG.md
+              echo "$line" | sed 's/fix://g' | sed 's/bugfix://g' >> CHANGELOG.md
+            elif echo "$line" | grep -q "chore:"; then
+              echo "### 🔧 Maintenance" >> CHANGELOG.md
+              echo "$line" | sed 's/chore://g' >> CHANGELOG.md
+            else
+              echo "### 📝 Other Changes" >> CHANGELOG.md
+              echo "$line" >> CHANGELOG.md
+            fi
+          done
+        else
+          echo "📝 Generating changelog since $LAST_TAG"
+          git log ${LAST_TAG}..HEAD~1 --pretty=format:"- %s (%h)" | while read line; do
+            if echo "$line" | grep -q "feat:\|feature:"; then
+              echo "### ✨ Features" >> CHANGELOG.md
+              echo "$line" | sed 's/feat://g' | sed 's/feature://g' >> CHANGELOG.md
+            elif echo "$line" | grep -q "fix:\|bugfix:"; then
+              echo "### 🐛 Bug Fixes" >> CHANGELOG.md
+              echo "$line" | sed 's/fix://g' | sed 's/bugfix://g' >> CHANGELOG.md
+            elif echo "$line" | grep -q "chore:"; then
+              echo "### 🔧 Maintenance" >> CHANGELOG.md
+              echo "$line" | sed 's/chore://g' >> CHANGELOG.md
+            else
+              echo "### 📝 Other Changes" >> CHANGELOG.md
+              echo "$line" >> CHANGELOG.md
+            fi
+          done
+        fi
 
     - name: Create Release
       id: create_release
