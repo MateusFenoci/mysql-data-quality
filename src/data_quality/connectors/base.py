@@ -71,3 +71,21 @@ class DatabaseConnector(ABC):
     ) -> str:
         """Get database-specific query for table information."""
         pass
+
+    def get_foreign_keys(
+        self, table_name: str, schema: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Get foreign key constraints for a table.
+
+        This is a default implementation that returns an empty list.
+        Subclasses should override this method if they support foreign key discovery.
+        """
+        return []
+
+    def get_tables_list(self, schema: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Get list of tables in the database.
+
+        This is a default implementation that returns an empty list.
+        Subclasses should override this method if they support table discovery.
+        """
+        return []
