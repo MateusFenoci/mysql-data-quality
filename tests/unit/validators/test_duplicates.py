@@ -276,3 +276,275 @@ class TestDuplicatesValidator:
         # Act & Assert
         with pytest.raises(ValueError, match="max_duplicates must be >= 0"):
             validator.validate_column(data, "test_table", "test_column", [invalid_rule])
+
+    def test_load_patterns_from_env_with_values(self):
+        """Test loading patterns from environment variables."""
+        import os
+
+        # Arrange
+        original_skip = os.environ.get("SKIP_DUPLICATE_PATTERNS", "")
+        original_unique = os.environ.get("FORCE_UNIQUE_PATTERNS", "")
+        original_force_cols = os.environ.get("FORCE_UNIQUE_COLUMNS", "")
+        original_allow_cols = os.environ.get("ALLOW_DUPLICATE_COLUMNS", "")
+
+        try:
+            os.environ["SKIP_DUPLICATE_PATTERNS"] = "test_skip,custom_pattern"
+            os.environ["FORCE_UNIQUE_PATTERNS"] = "test_unique,custom_unique"
+            os.environ["FORCE_UNIQUE_COLUMNS"] = "force_column"
+            os.environ["ALLOW_DUPLICATE_COLUMNS"] = "allow_column"
+
+            # Act
+            validator = DuplicatesValidator()
+
+            # Assert
+            assert "test_skip" in validator._skip_patterns
+            assert "custom_pattern" in validator._skip_patterns
+            assert "test_unique" in validator._unique_patterns
+            assert "custom_unique" in validator._unique_patterns
+            assert "force_column" in validator._force_unique_columns
+            assert "allow_column" in validator._allow_duplicate_columns
+
+        finally:
+            # Cleanup
+            os.environ["SKIP_DUPLICATE_PATTERNS"] = original_skip
+            os.environ["FORCE_UNIQUE_PATTERNS"] = original_unique
+            os.environ["FORCE_UNIQUE_COLUMNS"] = original_force_cols
+            os.environ["ALLOW_DUPLICATE_COLUMNS"] = original_allow_cols
+
+    def test_load_patterns_from_env_empty_values(self):
+        """Test loading patterns with empty environment variables (uses defaults)."""
+        import os
+
+        # Arrange
+        original_skip = os.environ.get("SKIP_DUPLICATE_PATTERNS", "")
+        original_unique = os.environ.get("FORCE_UNIQUE_PATTERNS", "")
+
+        try:
+            os.environ["SKIP_DUPLICATE_PATTERNS"] = ""
+            os.environ["FORCE_UNIQUE_PATTERNS"] = ""
+
+            # Act
+            validator = DuplicatesValidator()
+
+            # Assert - should have default patterns
+            assert len(validator._skip_patterns) > 0
+            assert len(validator._unique_patterns) > 0
+            assert "cpf" in validator._unique_patterns  # Default pattern
+            assert "cliente_id" in validator._skip_patterns  # Default pattern
+
+        finally:
+            # Cleanup
+            os.environ["SKIP_DUPLICATE_PATTERNS"] = original_skip
+            os.environ["FORCE_UNIQUE_PATTERNS"] = original_unique
+
+    def test_should_skip_column_for_duplicates_force_unique(self):
+        """Test intelligent pattern matching for force unique columns."""
+        # Arrange
+        validator = DuplicatesValidator()
+        validator._force_unique_columns.add("specific_column")
+
+        # Act & Assert
+        assert not validator._should_skip_column_for_duplicates("specific_column")
+        assert not validator._should_skip_column_for_duplicates(
+            "cpf"
+        )  # Should validate CPF
+        assert not validator._should_skip_column_for_duplicates(
+            "cnpj"
+        )  # Should validate CNPJ
+
+    def test_should_skip_column_for_duplicates_allow_duplicates(self):
+        """Test intelligent pattern matching for allow duplicate columns."""
+        # Arrange
+        validator = DuplicatesValidator()
+        validator._allow_duplicate_columns.add("specific_column")
+
+        # Act & Assert
+        assert validator._should_skip_column_for_duplicates("specific_column")
+        assert validator._should_skip_column_for_duplicates("cliente_id")  # FK pattern
+        assert validator._should_skip_column_for_duplicates(
+            "uuid_field"
+        )  # UUID pattern
+        assert validator._should_skip_column_for_duplicates(
+            "status"
+        )  # Categorical pattern
+
+    def test_should_skip_column_for_duplicates_patterns(self):
+        """Test intelligent pattern matching for various column types."""
+        # Arrange
+        validator = DuplicatesValidator()
+
+        # Act & Assert - Columns that should be validated (unique patterns)
+        assert not validator._should_skip_column_for_duplicates("cpf")
+        assert not validator._should_skip_column_for_duplicates("cnpj")
+        assert not validator._should_skip_column_for_duplicates("document_number")
+        assert not validator._should_skip_column_for_duplicates("serial_code")
+        assert not validator._should_skip_column_for_duplicates("barcode")
+
+        # Columns that should be skipped (skip patterns)
+        assert validator._should_skip_column_for_duplicates("cliente_id")
+        assert validator._should_skip_column_for_duplicates("fk_user")
+        assert validator._should_skip_column_for_duplicates("uuid_field")
+        assert validator._should_skip_column_for_duplicates("nome")
+        assert validator._should_skip_column_for_duplicates("endereco")
+        assert validator._should_skip_column_for_duplicates("status")
+        assert validator._should_skip_column_for_duplicates("categoria")
+
+    def test_should_skip_column_default_behavior(self):
+        """Test default behavior for columns that don't match any pattern."""
+        # Arrange
+        validator = DuplicatesValidator()
+
+        # Act & Assert - Random column names should be validated by default
+        assert not validator._should_skip_column_for_duplicates("random_column")
+        assert not validator._should_skip_column_for_duplicates("some_field")
+        assert not validator._should_skip_column_for_duplicates("unknown_col")
+
+    def test_validate_table_with_intelligent_skipping(self):
+        """Test table validation with intelligent column skipping."""
+        # Arrange
+        validator = DuplicatesValidator()
+        data = pd.DataFrame(
+            {
+                "cpf": [
+                    "123.456.789-01",
+                    "987.654.321-02",
+                    "123.456.789-01",
+                ],  # Should validate
+                "cliente_id": [1, 2, 1],  # Should skip (FK)
+                "nome": ["João", "Maria", "João"],  # Should skip (descriptive)
+                "unique_code": ["A001", "A002", "A003"],  # Should validate
+            }
+        )
+
+        # Act
+        results = validator.validate_table(data, "test_table")
+
+        # Assert
+        validated_columns = {r.column_name for r in results if r.column_name}
+
+        # Should validate CPF and unique_code, skip cliente_id and nome
+        assert "cpf" in validated_columns
+        assert "unique_code" in validated_columns
+        assert "cliente_id" not in validated_columns
+        assert "nome" not in validated_columns
+
+    def test_composite_key_validation_error_cases(self):
+        """Test composite key validation error handling."""
+        # Arrange
+        validator = DuplicatesValidator()
+        data = pd.DataFrame({"col1": [1, 2, 3], "col2": ["A", "B", "C"]})
+
+        # Test missing parameters
+        rule_no_params = ValidationRule(
+            name="composite_test",
+            description="Test composite key",
+            severity=ValidationSeverity.ERROR,
+            parameters={},  # Empty parameters instead of None
+        )
+
+        with pytest.raises(KeyError, match="columns"):
+            validator._validate_composite_key(data, "test_table", rule_no_params)
+
+        # Test missing columns
+        rule_missing_cols = ValidationRule(
+            name="composite_test",
+            description="Test composite key",
+            severity=ValidationSeverity.ERROR,
+            parameters={"columns": ["col1", "missing_col"]},
+        )
+
+        with pytest.raises(ValueError, match="columns.*not found"):
+            validator._validate_composite_key(data, "test_table", rule_missing_cols)
+
+        # Test invalid max_duplicates
+        rule_invalid_max = ValidationRule(
+            name="composite_test",
+            description="Test composite key",
+            severity=ValidationSeverity.ERROR,
+            parameters={"columns": ["col1", "col2"], "max_duplicates": -1},
+        )
+
+        with pytest.raises(ValueError, match="max_duplicates must be >= 0"):
+            validator._validate_composite_key(data, "test_table", rule_invalid_max)
+
+    def test_composite_key_validation_success(self):
+        """Test successful composite key validation."""
+        # Arrange
+        validator = DuplicatesValidator()
+        data = pd.DataFrame(
+            {
+                "col1": [1, 2, 1, 3],
+                "col2": ["A", "B", "B", "C"],  # (1,A), (2,B), (1,B), (3,C) - all unique
+            }
+        )
+
+        rule = ValidationRule(
+            name="composite_test",
+            description="Test composite key",
+            severity=ValidationSeverity.ERROR,
+            parameters={"columns": ["col1", "col2"], "max_duplicates": 0},
+        )
+
+        # Act
+        result = validator._validate_composite_key(data, "test_table", rule)
+
+        # Assert
+        assert result.passed is True
+        assert result.affected_rows == 0
+        assert result.details["unique_combinations"] == 4
+        assert result.details["duplicate_combinations"] == 0
+
+    def test_composite_key_validation_with_duplicates(self):
+        """Test composite key validation with duplicate combinations."""
+        # Arrange
+        validator = DuplicatesValidator()
+        data = pd.DataFrame(
+            {
+                "col1": [1, 2, 1, 1],
+                "col2": ["A", "B", "A", "A"],  # (1,A) appears twice - duplicate
+            }
+        )
+
+        rule = ValidationRule(
+            name="composite_test",
+            description="Test composite key",
+            severity=ValidationSeverity.ERROR,
+            parameters={"columns": ["col1", "col2"], "max_duplicates": 0},
+        )
+
+        # Act
+        result = validator._validate_composite_key(data, "test_table", rule)
+
+        # Assert
+        assert result.passed is False
+        assert (
+            result.affected_rows == 2
+        )  # Two duplicate rows (3rd and 4th occurrence of (1,A))
+        assert result.details["unique_combinations"] == 2  # [1,A] and [2,B]
+        assert result.details["duplicate_combinations"] == 2
+        assert len(result.details["sample_duplicates"]) > 0
+
+    def test_composite_key_validation_ignore_nulls(self):
+        """Test composite key validation ignoring null values."""
+        # Arrange
+        validator = DuplicatesValidator()
+        data = pd.DataFrame({"col1": [1, 2, None, 1], "col2": ["A", "B", "C", "A"]})
+
+        rule = ValidationRule(
+            name="composite_test",
+            description="Test composite key",
+            severity=ValidationSeverity.ERROR,
+            parameters={
+                "columns": ["col1", "col2"],
+                "max_duplicates": 0,
+                "ignore_nulls": True,
+            },
+        )
+
+        # Act
+        result = validator._validate_composite_key(data, "test_table", rule)
+
+        # Assert
+        assert result.passed is False  # (1,A) appears twice
+        assert result.details["total_combinations"] == 3  # Null row excluded
+        assert result.details["duplicate_combinations"] == 1
