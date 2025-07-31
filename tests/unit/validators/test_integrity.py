@@ -342,3 +342,308 @@ class TestIntegrityValidator:
         result = results[0]
         assert not result.passed
         assert "not supported" in result.message.lower()
+
+    def test_validate_foreign_key_missing_foreign_key_param(self):
+        """Test foreign key validation with missing foreign_key parameter."""
+        # Arrange
+        validator = IntegrityValidator()
+        rule = ValidationRule(
+            name="missing_fk_param",
+            description="Missing foreign key parameter",
+            severity=ValidationSeverity.ERROR,
+            parameters={
+                "reference_table": "cliente",
+                "reference_column": "uid",
+                "reference_data": pd.DataFrame({"uid": ["client_1"]}),
+            },
+        )
+
+        data = pd.DataFrame({"id": [1], "cliente_uid": ["client_1"]})
+
+        # Act
+        results = validator.validate_table(data, "orders", [rule])
+
+        # Assert
+        assert len(results) == 1
+        result = results[0]
+        assert not result.passed
+        assert "foreign_key parameter is required" in result.message
+
+    def test_validate_foreign_key_missing_reference_table_param(self):
+        """Test foreign key validation with missing reference_table parameter."""
+        # Arrange
+        validator = IntegrityValidator()
+        rule = ValidationRule(
+            name="missing_ref_table",
+            description="Missing reference table parameter",
+            severity=ValidationSeverity.ERROR,
+            parameters={
+                "foreign_key": "cliente_uid",
+                "reference_column": "uid",
+                "reference_data": pd.DataFrame({"uid": ["client_1"]}),
+            },
+        )
+
+        data = pd.DataFrame({"id": [1], "cliente_uid": ["client_1"]})
+
+        # Act
+        results = validator.validate_table(data, "orders", [rule])
+
+        # Assert
+        assert len(results) == 1
+        result = results[0]
+        assert not result.passed
+        assert "reference_table parameter is required" in result.message
+
+    def test_validate_foreign_key_missing_reference_column_param(self):
+        """Test foreign key validation with missing reference_column parameter."""
+        # Arrange
+        validator = IntegrityValidator()
+        rule = ValidationRule(
+            name="missing_ref_col",
+            description="Missing reference column parameter",
+            severity=ValidationSeverity.ERROR,
+            parameters={
+                "foreign_key": "cliente_uid",
+                "reference_table": "cliente",
+                "reference_data": pd.DataFrame({"uid": ["client_1"]}),
+            },
+        )
+
+        data = pd.DataFrame({"id": [1], "cliente_uid": ["client_1"]})
+
+        # Act
+        results = validator.validate_table(data, "orders", [rule])
+
+        # Assert
+        assert len(results) == 1
+        result = results[0]
+        assert not result.passed
+        assert "reference_column parameter is required" in result.message
+
+    def test_validate_foreign_key_missing_reference_data_param(self):
+        """Test foreign key validation with missing reference_data parameter."""
+        # Arrange
+        validator = IntegrityValidator()
+        rule = ValidationRule(
+            name="missing_ref_data",
+            description="Missing reference data parameter",
+            severity=ValidationSeverity.ERROR,
+            parameters={
+                "foreign_key": "cliente_uid",
+                "reference_table": "cliente",
+                "reference_column": "uid",
+            },
+        )
+
+        data = pd.DataFrame({"id": [1], "cliente_uid": ["client_1"]})
+
+        # Act
+        results = validator.validate_table(data, "orders", [rule])
+
+        # Assert
+        assert len(results) == 1
+        result = results[0]
+        assert not result.passed
+        assert "'NoneType' object has no attribute 'columns'" in result.message
+
+    def test_validate_foreign_key_column_not_found(self):
+        """Test foreign key validation when foreign key column doesn't exist."""
+        # Arrange
+        validator = IntegrityValidator()
+        rule = ValidationRule(
+            name="missing_fk_col",
+            description="Foreign key column not found",
+            severity=ValidationSeverity.ERROR,
+            parameters={
+                "foreign_key": "nonexistent_column",
+                "reference_table": "cliente",
+                "reference_column": "uid",
+                "reference_data": pd.DataFrame({"uid": ["client_1"]}),
+            },
+        )
+
+        data = pd.DataFrame({"id": [1], "cliente_uid": ["client_1"]})
+
+        # Act
+        results = validator.validate_table(data, "orders", [rule])
+
+        # Assert
+        assert len(results) == 1
+        result = results[0]
+        assert not result.passed
+        assert "Foreign key columns not found in data" in result.message
+
+    def test_validate_foreign_key_reference_column_not_found(self):
+        """Test foreign key validation when reference column doesn't exist."""
+        # Arrange
+        validator = IntegrityValidator()
+        rule = ValidationRule(
+            name="missing_ref_col",
+            description="Reference column not found",
+            severity=ValidationSeverity.ERROR,
+            parameters={
+                "foreign_key": "cliente_uid",
+                "reference_table": "cliente",
+                "reference_column": "nonexistent_column",
+                "reference_data": pd.DataFrame({"uid": ["client_1"]}),
+            },
+        )
+
+        data = pd.DataFrame({"id": [1], "cliente_uid": ["client_1"]})
+
+        # Act
+        results = validator.validate_table(data, "orders", [rule])
+
+        # Assert
+        assert len(results) == 1
+        result = results[0]
+        assert not result.passed
+        assert "Reference columns not found in reference data" in result.message
+
+    def test_validate_foreign_key_with_null_values_allow_nulls_true(self):
+        """Test foreign key validation allowing null values."""
+        # Arrange
+        validator = IntegrityValidator()
+        rule = ValidationRule(
+            name="allow_nulls_fk",
+            description="Foreign key validation allowing nulls",
+            severity=ValidationSeverity.ERROR,
+            parameters={
+                "foreign_key": "cliente_uid",
+                "reference_table": "cliente",
+                "reference_column": "uid",
+                "reference_data": pd.DataFrame({"uid": ["client_1", "client_2"]}),
+                "allow_nulls": True,  # Allow nulls
+            },
+        )
+
+        data = pd.DataFrame(
+            {
+                "id": [1, 2, 3, 4],
+                "cliente_uid": ["client_1", None, "client_2", None],
+            }
+        )
+
+        # Act
+        results = validator.validate_table(data, "orders", [rule])
+
+        # Assert
+        assert len(results) == 1
+        result = results[0]
+        assert result.passed is True  # All non-null values are valid, nulls allowed
+        # With allow_nulls=True, all references are considered valid (including nulls)
+        assert result.details["valid_references"] == 4
+
+    def test_validate_foreign_key_with_null_values_allow_nulls_false(self):
+        """Test foreign key validation not allowing null values."""
+        # Arrange
+        validator = IntegrityValidator()
+        rule = ValidationRule(
+            name="disallow_nulls_fk",
+            description="Foreign key validation disallowing nulls",
+            severity=ValidationSeverity.ERROR,
+            parameters={
+                "foreign_key": "cliente_uid",
+                "reference_table": "cliente",
+                "reference_column": "uid",
+                "reference_data": pd.DataFrame({"uid": ["client_1", "client_2"]}),
+                "allow_nulls": False,
+            },
+        )
+
+        data = pd.DataFrame(
+            {
+                "id": [1, 2, 3, 4],
+                "cliente_uid": ["client_1", None, "client_2", None],
+            }
+        )
+
+        # Act
+        results = validator.validate_table(data, "orders", [rule])
+
+        # Assert
+        assert len(results) == 1
+        result = results[0]
+        assert (
+            result.passed is False
+        )  # Null values are considered invalid when allow_nulls=False
+        assert result.details["total_references"] == 4  # All values counted
+        assert result.details["valid_references"] == 2  # Only non-null valid ones
+        assert result.details["invalid_references"] == 2  # The two nulls
+
+    def test_validate_foreign_key_empty_reference_data(self):
+        """Test foreign key validation with empty reference data."""
+        # Arrange
+        validator = IntegrityValidator()
+        rule = ValidationRule(
+            name="empty_ref_data",
+            description="Empty reference data",
+            severity=ValidationSeverity.ERROR,
+            parameters={
+                "foreign_key": "cliente_uid",
+                "reference_table": "cliente",
+                "reference_column": "uid",
+                "reference_data": pd.DataFrame({"uid": []}),  # Empty DataFrame
+            },
+        )
+
+        data = pd.DataFrame(
+            {
+                "id": [1, 2],
+                "cliente_uid": ["client_1", "client_2"],
+            }
+        )
+
+        # Act
+        results = validator.validate_table(data, "orders", [rule])
+
+        # Assert
+        assert len(results) == 1
+        result = results[0]
+        assert result.passed is False  # All references should be invalid
+        assert result.details["total_references"] == 2
+        assert result.details["valid_references"] == 0
+        assert result.details["invalid_references"] == 2
+
+    def test_validate_foreign_key_duplicate_reference_values(self):
+        """Test foreign key validation with duplicate values in reference data."""
+        # Arrange
+        validator = IntegrityValidator()
+        rule = ValidationRule(
+            name="duplicate_refs",
+            description="Duplicate reference values",
+            severity=ValidationSeverity.ERROR,
+            parameters={
+                "foreign_key": "cliente_uid",
+                "reference_table": "cliente",
+                "reference_column": "uid",
+                "reference_data": pd.DataFrame(
+                    {
+                        "uid": [
+                            "client_1",
+                            "client_1",
+                            "client_2",
+                        ]  # client_1 appears twice
+                    }
+                ),
+            },
+        )
+
+        data = pd.DataFrame(
+            {
+                "id": [1, 2, 3],
+                "cliente_uid": ["client_1", "client_2", "client_3"],
+            }
+        )
+
+        # Act
+        results = validator.validate_table(data, "orders", [rule])
+
+        # Assert
+        assert len(results) == 1
+        result = results[0]
+        assert result.passed is False  # client_3 is invalid
+        assert result.details["valid_references"] == 2  # client_1 and client_2
+        assert result.details["invalid_references"] == 1  # client_3
+        assert "client_3" in result.details["orphaned_values"]

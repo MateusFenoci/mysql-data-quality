@@ -1,5 +1,6 @@
 """Duplicates validator for checking duplicate values."""
 
+import os
 from typing import List, Optional
 
 import pandas as pd
@@ -25,6 +26,13 @@ class DuplicatesValidator(DataQualityValidator):
             description="Validates data uniqueness by checking for duplicate values",
         )
 
+        # Initialize custom column configurations first
+        self._force_unique_columns = set()  # Columns that must be unique
+        self._allow_duplicate_columns = set()  # Columns that can have duplicates
+
+        # Load configuration from environment
+        self._load_patterns_from_env()
+
         # Add default rule (Open/Closed Principle - extensible via rule addition)
         default_rule = ValidationRule(
             name="default_uniqueness",
@@ -33,6 +41,132 @@ class DuplicatesValidator(DataQualityValidator):
             parameters={"max_duplicates": 0, "ignore_nulls": True},
         )
         self.add_rule(default_rule)
+
+    def _load_patterns_from_env(self):
+        """Load duplicate validation patterns from environment variables."""
+        # Load skip patterns (columns that can have duplicates)
+        skip_patterns_env = os.getenv("SKIP_DUPLICATE_PATTERNS", "")
+        self._skip_patterns = [
+            p.strip() for p in skip_patterns_env.split(",") if p.strip()
+        ]
+
+        # Load force unique patterns (columns that must be unique)
+        unique_patterns_env = os.getenv("FORCE_UNIQUE_PATTERNS", "")
+        self._unique_patterns = [
+            p.strip() for p in unique_patterns_env.split(",") if p.strip()
+        ]
+
+        # Load specific column overrides
+        force_unique_cols = os.getenv("FORCE_UNIQUE_COLUMNS", "")
+        if force_unique_cols:
+            self._force_unique_columns.update(
+                p.strip() for p in force_unique_cols.split(",") if p.strip()
+            )
+
+        allow_duplicate_cols = os.getenv("ALLOW_DUPLICATE_COLUMNS", "")
+        if allow_duplicate_cols:
+            self._allow_duplicate_columns.update(
+                p.strip() for p in allow_duplicate_cols.split(",") if p.strip()
+            )
+
+        # Set defaults if no environment configuration
+        if not self._skip_patterns:
+            self._skip_patterns = [
+                "_id",
+                "_uid",
+                "fk_",
+                "_fk",
+                "foreign_key",
+                "_key",
+                "ref_",
+                "_ref",
+                "emp_id",
+                "empresa_id",
+                "cliente_id",
+                "user_id",
+                "usuario_id",
+                "categoria_id",
+                "tipo_id",
+                "status_id",
+                "parent_id",
+                "uuid",
+                "guid",
+                "_uuid",
+                "_guid",
+                "uid",
+                "endereco",
+                "rua",
+                "avenida",
+                "cidade",
+                "estado",
+                "pais",
+                "cep",
+                "nome",
+                "sobrenome",
+                "titulo",
+                "descricao",
+                "observacao",
+                "comentario",
+                "telefone",
+                "celular",
+                "email",
+                "cor",
+                "tamanho",
+                "peso",
+                "altura",
+                "largura",
+                "marca",
+                "modelo",
+                "versao",
+                "status",
+                "situacao",
+                "tipo",
+                "categoria",
+                "classe",
+                "genero",
+                "sexo",
+                "nacionalidade",
+                "profissao",
+                "ativo",
+                "inativo",
+                "pendente",
+                "aprovado",
+                "rejeitado",
+            ]
+
+        if not self._unique_patterns:
+            self._unique_patterns = [
+                "cpf",
+                "cnpj",
+                "rg",
+                "passaporte",
+                "documento",
+                "codigo",
+                "numero",
+                "serial",
+                "sku",
+                "barcode",
+                "login",
+                "username",
+                "email_pessoal",
+            ]
+
+    def configure_column_uniqueness(
+        self,
+        force_unique: Optional[List[str]] = None,
+        allow_duplicates: Optional[List[str]] = None,
+    ):
+        """
+        Configure specific columns for uniqueness validation.
+
+        Args:
+            force_unique: List of column names that must be unique (override smart detection)
+            allow_duplicates: List of column names that can have duplicates (override smart detection)
+        """
+        if force_unique:
+            self._force_unique_columns.update(force_unique)
+        if allow_duplicates:
+            self._allow_duplicate_columns.update(allow_duplicates)
 
     def validate_table(
         self,
@@ -105,6 +239,10 @@ class DuplicatesValidator(DataQualityValidator):
             rules = self.get_rules()
 
         if not rules:
+            return []
+
+        # Skip FK/UUID columns that are expected to have duplicates
+        if self._should_skip_column_for_duplicates(column_name):
             return []
 
         results = []
@@ -289,3 +427,34 @@ class DuplicatesValidator(DataQualityValidator):
         )
 
         return result
+
+    def _should_skip_column_for_duplicates(self, column_name: str) -> bool:
+        """
+        Intelligent pattern matching to determine if column should skip duplicate validation.
+
+        Args:
+            column_name: The column name to evaluate
+
+        Returns:
+            bool: True if column should skip duplicate validation
+        """
+        column_lower = column_name.lower()
+
+        # Check explicit configurations first
+        if column_name in self._force_unique_columns:
+            return False  # Must validate for duplicates
+        if column_name in self._allow_duplicate_columns:
+            return True  # Skip validation
+
+        # Check for patterns that should force uniqueness validation
+        for pattern in self._unique_patterns:
+            if pattern in column_lower:
+                return False  # Must validate for duplicates
+
+        # Check for patterns that typically allow duplicates
+        for pattern in self._skip_patterns:
+            if pattern in column_lower:
+                return True  # Skip validation
+
+        # Default: validate for duplicates
+        return False

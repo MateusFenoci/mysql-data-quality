@@ -8,7 +8,7 @@
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Code Quality](https://img.shields.io/badge/code%20quality-A-green)](.)
 
-🔍 Ferramenta para validação e análise de qualidade de dados em bancos de dados, com foco em MariaDB/MySQL.
+🔍 Ferramenta para validação e análise de qualidade de dados com suporte a múltiplos bancos de dados: MySQL/MariaDB, PostgreSQL, SQL Server, Oracle e SQLite.
 
 ## 🚀 Quick Start
 
