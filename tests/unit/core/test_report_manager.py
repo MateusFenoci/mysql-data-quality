@@ -188,3 +188,200 @@ class TestReportManager:
             mock_console.print.assert_called_once()
             call_str = str(mock_console.print.call_args_list[0])
             assert "No reports were generated" in call_str
+
+    @patch("data_quality.core.report_manager.HTMLReportGenerator")
+    def test_generate_single_report_with_custom_name(self, mock_html_generator_class):
+        """Test generating single report with custom name."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Arrange
+            manager = ReportManager(temp_dir)
+            mock_generator = Mock()
+            mock_html_generator_class.return_value = mock_generator
+
+            original_path = Path(temp_dir) / "original_report.html"
+            original_path.touch()  # Create the file so rename works
+            mock_generator.generate_report.return_value = original_path
+
+            result = ValidationResult(
+                rule_name="test_rule",
+                table_name="test_table",
+                column_name="test_column",
+                passed=True,
+                message="Test message",
+                severity=ValidationSeverity.INFO,
+                details={},
+                timestamp=datetime.now(),
+            )
+
+            # Act
+            report_path = manager.generate_single_report(
+                [result], "test_table", "html", custom_name="custom_report"
+            )
+
+            # Assert
+            assert report_path.name.startswith("custom_report_")
+            assert report_path.name.endswith(".html")
+            assert report_path.exists()
+
+    @patch("data_quality.core.report_manager.HTMLReportGenerator")
+    @patch("data_quality.core.report_manager.console")
+    def test_generate_multiple_reports_with_exception(
+        self, mock_console, mock_html_generator_class
+    ):
+        """Test generating multiple reports when one format fails."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Arrange
+            manager = ReportManager(temp_dir)
+            mock_generator = Mock()
+            mock_html_generator_class.return_value = mock_generator
+            mock_generator.generate_report.side_effect = Exception("Test error")
+
+            result = ValidationResult(
+                rule_name="test_rule",
+                table_name="test_table",
+                column_name="test_column",
+                passed=True,
+                message="Test message",
+                severity=ValidationSeverity.INFO,
+                details={},
+                timestamp=datetime.now(),
+            )
+
+            # Act
+            reports = manager.generate_multiple_reports(
+                [result], "test_table", ["html"]
+            )
+
+            # Assert
+            assert len(reports) == 0  # No successful reports
+            # Verify error was printed
+            calls = [str(call) for call in mock_console.print.call_args_list]
+            assert any("HTML report failed" in call for call in calls)
+
+    @patch("data_quality.core.report_manager.HTMLReportGenerator")
+    @patch("data_quality.core.report_manager.JSONReportGenerator")
+    @patch("data_quality.core.report_manager.SummaryReportGenerator")
+    def test_generate_unified_reports(
+        self, mock_summary_gen, mock_json_gen, mock_html_gen
+    ):
+        """Test generating unified reports."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Arrange
+            manager = ReportManager(temp_dir)
+
+            # Create mock generators
+            mock_html_generator = Mock()
+            mock_json_generator = Mock()
+            mock_summary_generator = Mock()
+
+            mock_html_gen.return_value = mock_html_generator
+            mock_json_gen.return_value = mock_json_generator
+            mock_summary_gen.return_value = mock_summary_generator
+
+            # Create temporary files for renaming
+            temp_html = Path(temp_dir) / "temp.html"
+            temp_json = Path(temp_dir) / "temp.json"
+            temp_txt = Path(temp_dir) / "temp.txt"
+
+            temp_html.touch()
+            temp_json.touch()
+            temp_txt.touch()
+
+            mock_html_generator.generate_report.return_value = temp_html
+            mock_json_generator.generate_report.return_value = temp_json
+            mock_summary_generator.generate_report.return_value = temp_txt
+
+            result = ValidationResult(
+                rule_name="test_rule",
+                table_name="test_table",
+                column_name="test_column",
+                passed=True,
+                message="Test message",
+                severity=ValidationSeverity.INFO,
+                details={},
+                timestamp=datetime.now(),
+            )
+
+            # Act
+            reports = manager.generate_unified_report(
+                [result], "test_table", report_name="custom_unified"
+            )
+
+            # Assert
+            assert len(reports) == 3
+            assert "html" in reports
+            assert "json" in reports
+            assert "txt" in reports
+
+            # Check that files were renamed with unified naming
+            assert "custom_unified" in reports["html"].name
+            assert "custom_unified" in reports["json"].name
+            assert "custom_unified" in reports["txt"].name
+
+    @patch("data_quality.core.report_manager.HTMLReportGenerator")
+    @patch("data_quality.core.report_manager.console")
+    def test_generate_unified_reports_with_exception(self, mock_console, mock_html_gen):
+        """Test generating unified reports when one format fails."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Arrange
+            manager = ReportManager(temp_dir)
+            mock_generator = Mock()
+            mock_html_gen.return_value = mock_generator
+            mock_generator.generate_report.side_effect = Exception("Test error")
+
+            result = ValidationResult(
+                rule_name="test_rule",
+                table_name="test_table",
+                column_name="test_column",
+                passed=True,
+                message="Test message",
+                severity=ValidationSeverity.INFO,
+                details={},
+                timestamp=datetime.now(),
+            )
+
+            # Act
+            reports = manager.generate_unified_report(
+                [result], "test_table", formats=["html"]
+            )
+
+            # Assert
+            assert len(reports) == 0  # No successful reports
+            # Verify error was printed
+            calls = [str(call) for call in mock_console.print.call_args_list]
+            assert any("HTML report failed" in call for call in calls)
+
+    def test_generate_multiple_reports_default_formats(self):
+        """Test that generate_multiple_reports uses default formats when none provided."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Arrange
+            manager = ReportManager(temp_dir)
+
+            result = ValidationResult(
+                rule_name="test_rule",
+                table_name="test_table",
+                column_name="test_column",
+                passed=True,
+                message="Test message",
+                severity=ValidationSeverity.INFO,
+                details={},
+                timestamp=datetime.now(),
+            )
+
+            with patch.object(manager, "generate_single_report") as mock_generate:
+                mock_generate.return_value = Path(temp_dir) / "test.html"
+
+                # Act
+                manager.generate_multiple_reports([result], "test_table", formats=[])
+
+                # Assert
+                # Should be called 3 times for default formats (html, json, txt)
+                assert mock_generate.call_count == 3
+
+                # Check that all default formats were called
+                calls = [
+                    call[0][2] for call in mock_generate.call_args_list
+                ]  # format_type argument
+                assert "html" in calls
+                assert "json" in calls
+                assert "txt" in calls

@@ -351,22 +351,24 @@ jobs:
         echo "tests=${{ needs.auto-version.outputs.tests }}" >> $GITHUB_OUTPUT
         echo "version=${{ needs.auto-version.outputs.version }}" >> $GITHUB_OUTPUT
 
-    - name: Update README shields
+    - name: Update README shields & Version
       run: |
         # Update shields in README.md with current data
+        sed -i "s/version *= *['\"][^'\"]*['\"]/version='${{ steps.shields.outputs.version }}'/" src/data_quality/cli.py
         sed -i "s/version-[^-]*-blue/version-${{ steps.shields.outputs.version }}-blue/g" README.md
         sed -i "s/coverage-[^%]*%25-/coverage-${{ steps.shields.outputs.coverage }}%25-/g" README.md
         sed -i "s/tests-[^%]*%20passed-/tests-${{ steps.shields.outputs.tests }}%20passed-/g" README.md
 
-    - name: Commit updated README
+    - name: Commit updated README & Version
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
+        git add src/data_quality/cli.py
         git add README.md
         if git diff --staged --quiet; then
           echo "No changes to commit"
         else
-          git commit -m "chore: update README shields with latest metrics"
+          git commit -m "chore: update README shields & Version CLI with latest metrics"
           git pull --rebase origin main
           git push origin main
         fi

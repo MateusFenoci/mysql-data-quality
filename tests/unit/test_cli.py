@@ -381,7 +381,7 @@ class TestCLI:
         assert "Analysis completed successfully!" in result.output
         assert "Generated 2 report(s)" in result.output
 
-        mock_orchestrator_class.assert_called_once_with("reports")
+        mock_orchestrator_class.assert_called_once_with("logs")
         mock_orchestrator.run_complete_analysis.assert_called_once()
 
         # Verify call arguments
