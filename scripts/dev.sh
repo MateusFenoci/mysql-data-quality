@@ -88,7 +88,8 @@ print('✅ CLI module ready!')
         if [ -z "$2" ]; then
             echo "❌ Please provide table name: ./scripts/dev.sh validate <table_name>"
             echo "📋 Available options:"
-            echo "  ./scripts/dev.sh validate <table_name>                    # Basic validation with all reports"
+            echo "  ./scripts/dev.sh validate <table_name>                    # Quick validation (saves to /tmp)"
+            echo "  ./scripts/dev.sh validate <table_name> --output-dir logs  # Save reports to logs folder"
             echo "  ./scripts/dev.sh validate <table_name> --sample-size 5000 # Custom sample size"
             echo ""
             echo "📊 Use 'tables' command to see available tables first"
@@ -97,7 +98,8 @@ print('✅ CLI module ready!')
         TABLE_NAME="$2"
         echo "🔍 Running data quality validations on table: $TABLE_NAME"
         shift 2
-        poetry run data-quality validate "$TABLE_NAME" --report-format html --report-format json --report-format summary --output-dir logs "$@"
+        # Default validation without generating reports in logs (dry-run style)
+        poetry run data-quality validate "$TABLE_NAME" --output-dir /tmp "$@"
         ;;
     "analyze")
         if [ -z "$2" ]; then

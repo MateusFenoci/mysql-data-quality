@@ -346,7 +346,7 @@ def validate(table_name, validators, sample_size, report_format, output_dir):
     "--output-dir",
     "-o",
     type=click.Path(),
-    default="reports",
+    default="logs",
     help="Output directory for reports",
 )
 @click.option("--report-name", "-n", type=str, help="Custom name for the report files")
