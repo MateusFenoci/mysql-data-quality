@@ -4,6 +4,10 @@ from typing import Dict, Type
 
 from .base import DatabaseConnector
 from .mysql import MySQLConnector
+from .postgresql import PostgreSQLConnector
+from .sqlserver import SQLServerConnector
+from .oracle import OracleConnector
+from .sqlite import SQLiteConnector
 
 
 class DatabaseConnectorFactory:
@@ -11,6 +15,13 @@ class DatabaseConnectorFactory:
 
     _connectors: Dict[str, Type[DatabaseConnector]] = {
         "mysql": MySQLConnector,
+        "mariadb": MySQLConnector,  # MariaDB uses same connector as MySQL
+        "postgresql": PostgreSQLConnector,
+        "postgres": PostgreSQLConnector,  # Alias for PostgreSQL
+        "sqlserver": SQLServerConnector,
+        "mssql": SQLServerConnector,  # Alias for SQL Server
+        "oracle": OracleConnector,
+        "sqlite": SQLiteConnector,
     }
 
     @classmethod

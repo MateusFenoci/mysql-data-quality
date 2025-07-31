@@ -4,6 +4,17 @@
 
 Este documento fornece uma documentação abrangente para o sistema de validação de qualidade de dados, implementado seguindo os princípios **SOLID** e o Desenvolvimento Guiado por Testes (**TDD**) com o padrão Triple-A.
 
+### Suporte Multi-Database
+
+O sistema suporta validação de qualidade de dados em múltiplos tipos de banco de dados:
+- **MySQL/MariaDB**: Conectores otimizados para MySQL e MariaDB
+- **PostgreSQL**: Suporte completo para PostgreSQL com queries específicas
+- **SQL Server**: Compatibilidade com Microsoft SQL Server
+- **Oracle**: Suporte para Oracle Database com sintaxe específica
+- **SQLite**: Suporte para bancos SQLite locais e em memória
+
+Todos os validadores funcionam de forma transparente independente do banco de dados utilizado, mantendo a mesma interface e garantindo resultados consistentes.
+
 ---
 ## Arquitetura
 

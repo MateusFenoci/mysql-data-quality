@@ -5,6 +5,10 @@ import pytest
 from data_quality.connectors.factory import DatabaseConnectorFactory
 from data_quality.connectors.base import DatabaseConnector
 from data_quality.connectors.mysql import MySQLConnector
+from data_quality.connectors.postgresql import PostgreSQLConnector
+from data_quality.connectors.sqlserver import SQLServerConnector
+from data_quality.connectors.oracle import OracleConnector
+from data_quality.connectors.sqlite import SQLiteConnector
 
 
 class MockConnector(DatabaseConnector):
@@ -43,14 +47,105 @@ class TestDatabaseConnectorFactory:
         assert isinstance(connector, MySQLConnector)
         assert connector.connection_string == connection_string
 
-    def test_create_connector_unsupported_driver(self):
-        """Test creating connector with unsupported driver."""
+    def test_create_connector_mariadb(self):
+        """Test creating MariaDB connector (should use MySQL connector)."""
+        # Arrange
+        connection_string = "mysql://user:pass@host:3306/db"
+        driver = "mariadb"
+
+        # Act
+        connector = DatabaseConnectorFactory.create_connector(connection_string, driver)
+
+        # Assert
+        assert isinstance(connector, MySQLConnector)
+        assert connector.connection_string == connection_string
+
+    def test_create_connector_postgresql(self):
+        """Test creating PostgreSQL connector."""
         # Arrange
         connection_string = "postgresql://user:pass@host:5432/db"
         driver = "postgresql"
 
+        # Act
+        connector = DatabaseConnectorFactory.create_connector(connection_string, driver)
+
+        # Assert
+        assert isinstance(connector, PostgreSQLConnector)
+        assert connector.connection_string == connection_string
+
+    def test_create_connector_postgres(self):
+        """Test creating PostgreSQL connector with 'postgres' alias."""
+        # Arrange
+        connection_string = "postgresql://user:pass@host:5432/db"
+        driver = "postgres"
+
+        # Act
+        connector = DatabaseConnectorFactory.create_connector(connection_string, driver)
+
+        # Assert
+        assert isinstance(connector, PostgreSQLConnector)
+        assert connector.connection_string == connection_string
+
+    def test_create_connector_sqlserver(self):
+        """Test creating SQL Server connector."""
+        # Arrange
+        connection_string = "mssql+pyodbc://user:pass@host/db"
+        driver = "sqlserver"
+
+        # Act
+        connector = DatabaseConnectorFactory.create_connector(connection_string, driver)
+
+        # Assert
+        assert isinstance(connector, SQLServerConnector)
+        assert connector.connection_string == connection_string
+
+    def test_create_connector_mssql(self):
+        """Test creating SQL Server connector with 'mssql' alias."""
+        # Arrange
+        connection_string = "mssql+pyodbc://user:pass@host/db"
+        driver = "mssql"
+
+        # Act
+        connector = DatabaseConnectorFactory.create_connector(connection_string, driver)
+
+        # Assert
+        assert isinstance(connector, SQLServerConnector)
+        assert connector.connection_string == connection_string
+
+    def test_create_connector_oracle(self):
+        """Test creating Oracle connector."""
+        # Arrange
+        connection_string = "oracle+cx_oracle://user:pass@host:1521/xe"
+        driver = "oracle"
+
+        # Act
+        connector = DatabaseConnectorFactory.create_connector(connection_string, driver)
+
+        # Assert
+        assert isinstance(connector, OracleConnector)
+        assert connector.connection_string == connection_string
+
+    def test_create_connector_sqlite(self):
+        """Test creating SQLite connector."""
+        # Arrange
+        connection_string = "sqlite:///test.db"
+        driver = "sqlite"
+
+        # Act
+        connector = DatabaseConnectorFactory.create_connector(connection_string, driver)
+
+        # Assert
+        assert isinstance(connector, SQLiteConnector)
+        assert connector.connection_string == connection_string
+
+    def test_create_connector_unsupported_driver(self):
+        """Test creating connector with unsupported driver."""
+        # Arrange
+        connection_string = "unknown://user:pass@host:5432/db"
+        driver = "unknown"
+
         # Act & Assert
-        with pytest.raises(ValueError, match="Unsupported database driver: postgresql"):
+        with pytest.raises(ValueError, match="Unsupported database driver: unknown"):
             DatabaseConnectorFactory.create_connector(connection_string, driver)
 
     def test_register_connector(self):

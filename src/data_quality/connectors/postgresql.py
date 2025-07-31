@@ -1,4 +1,4 @@
-"""MySQL/MariaDB database connector."""
+"""PostgreSQL database connector."""
 
 from typing import List, Dict, Any, Optional
 
@@ -7,26 +7,26 @@ from sqlalchemy import create_engine, text
 from .base import DatabaseConnector
 
 
-class MySQLConnector(DatabaseConnector):
-    """MySQL/MariaDB database connector."""
+class PostgreSQLConnector(DatabaseConnector):
+    """PostgreSQL database connector."""
 
     def connect(self) -> None:
-        """Establish MySQL/MariaDB connection."""
+        """Establish PostgreSQL connection."""
         try:
             self.engine = create_engine(self.connection_string)
             self.test_connection()
         except Exception as e:
             self.engine = None
-            raise RuntimeError(f"Failed to connect to MySQL/MariaDB: {str(e)}")
+            raise RuntimeError(f"Failed to connect to PostgreSQL: {str(e)}")
 
     def disconnect(self) -> None:
-        """Close MySQL/MariaDB connection."""
+        """Close PostgreSQL connection."""
         if self.engine:
             self.engine.dispose()
             self.engine = None
 
     def test_connection(self) -> bool:
-        """Test MySQL/MariaDB connection."""
+        """Test PostgreSQL connection."""
         if not self.engine:
             return False
 
@@ -42,14 +42,14 @@ class MySQLConnector(DatabaseConnector):
     def _get_table_info_query(
         self, table_name: str, schema: Optional[str] = None
     ) -> str:
-        """Get MySQL/MariaDB-specific query for table information."""
-        database_filter = (
+        """Get PostgreSQL-specific query for table information."""
+        schema_filter = (
             f"AND table_schema = '{schema}'"
             if schema
-            else "AND table_schema = DATABASE()"
+            else "AND table_schema = 'public'"
         )
 
-        # Table name is validated by MySQL connector, safe to use
+        # Table name is validated by PostgreSQL connector, safe to use
         query = f"""
         SELECT
             column_name,
@@ -61,7 +61,7 @@ class MySQLConnector(DatabaseConnector):
             numeric_scale
         FROM information_schema.columns
         WHERE table_name = '{table_name}'
-        {database_filter}
+        {schema_filter}
         ORDER BY ordinal_position
         """  # nosec B608
         return query
@@ -70,21 +70,23 @@ class MySQLConnector(DatabaseConnector):
         self, table_name: str, schema: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """Get foreign key constraints for a table."""
-        database_filter = (
-            f"AND kcu.table_schema = '{schema}'"
-            if schema
-            else "AND kcu.table_schema = DATABASE()"
-        )
+        schema_name = schema or "public"
 
         query = f"""
         SELECT
             kcu.column_name,
-            kcu.referenced_table_name as referenced_table,
-            kcu.referenced_column_name as referenced_column
-        FROM information_schema.key_column_usage kcu
-        WHERE kcu.table_name = '{table_name}'
-        AND kcu.referenced_table_name IS NOT NULL
-        {database_filter}
+            ccu.table_name AS referenced_table,
+            ccu.column_name AS referenced_column
+        FROM information_schema.table_constraints tc
+        JOIN information_schema.key_column_usage kcu
+            ON tc.constraint_name = kcu.constraint_name
+            AND tc.table_schema = kcu.table_schema
+        JOIN information_schema.constraint_column_usage ccu
+            ON ccu.constraint_name = tc.constraint_name
+            AND ccu.table_schema = tc.table_schema
+        WHERE tc.constraint_type = 'FOREIGN KEY'
+            AND tc.table_name = '{table_name}'
+            AND tc.table_schema = '{schema_name}'
         """  # nosec B608
 
         result = self.execute_query(query)
@@ -92,10 +94,10 @@ class MySQLConnector(DatabaseConnector):
 
     def get_tables_list(self, schema: Optional[str] = None) -> List[Dict[str, Any]]:
         """Get list of tables in the database."""
-        database_filter = (
+        schema_filter = (
             f"AND table_schema = '{schema}'"
             if schema
-            else "AND table_schema = DATABASE()"
+            else "AND table_schema = 'public'"
         )
 
         query = f"""
@@ -105,7 +107,7 @@ class MySQLConnector(DatabaseConnector):
             table_type
         FROM information_schema.tables
         WHERE table_type = 'BASE TABLE'
-        {database_filter}
+        {schema_filter}
         ORDER BY table_name
         """  # nosec B608
 
